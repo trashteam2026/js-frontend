@@ -218,17 +218,12 @@ export default function TabBar({
       </DropdownWrapper>
 
       <RightSection>
-<<<<<<< Updated upstream
-        <AddButton title="Add Category">+</AddButton>
-        <FilterAllButton>Filter All 🔽</FilterAllButton>
-=======
         <AddButton title="Add Category" onClick={onAddCategory}>
           <FiPlus />
         </AddButton>
         <FilterAllButton onClick={onFilterAll}>
           <span>Filter All</span> <FiFilter size={14} />
         </FilterAllButton>
->>>>>>> Stashed changes
       </RightSection>
     </TabContainer>
   );

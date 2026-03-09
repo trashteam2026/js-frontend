@@ -156,17 +156,12 @@ export default function InventoryPage() {
   }, [activeTab, selectedCategoryId, searchQuery, sortBy]);
 
   const handleItemClick = (item) => {
-<<<<<<< Updated upstream
-    // TODO: open ItemDetailModal
-    console.log('Item clicked:', item.name);
-=======
     setSelectedItemId(item.id);
   };
 
   const handleAddCategory = (data) => {
     console.log('Add category:', data);
     // TODO: API call when backend is ready
->>>>>>> Stashed changes
   };
 
   return (
