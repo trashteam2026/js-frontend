@@ -12,6 +12,7 @@ import RequestPasswordReset from '@/pages/account/RequestPasswordReset';
 import ResetPassword from '@/pages/account/ResetPassword';
 import SignUp from '@/pages/account/SignUp';
 import Home from '@/pages/home/Home';
+import InventoryPage from '@/pages/inventory/InventoryPage';
 import NotFound from '@/pages/not-found/NotFound';
 
 import './App.css';
@@ -21,6 +22,9 @@ export default function App() {
     <UserProvider>
       <BrowserRouter>
         <Routes>
+          <Route element={<PrivateRoute />}>
+            <Route path='inventory' element={<InventoryPage />} />
+          </Route>
           <Route path='/' element={<NavLayout />}>
             <Route element={<PrivateRoute />}>
               <Route index element={<Home />} />

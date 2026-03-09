@@ -7,6 +7,8 @@ import { Button } from '@/common/components/atoms/Button';
 import { useUser } from '@/common/contexts/UserContext';
 
 import LogoutModal from './LogoutModal';
+import PantryLogo from '@/assets/icons/pantry-logo.svg';
+
 
 const StyledNav = styled.nav`
   display: flex;
@@ -54,7 +56,9 @@ export default function NavBar() {
   return (
     <StyledNav>
       <LeftAligned>
-        <LogoPlaceholder onClick={() => navigate('/')}>[LOGO]</LogoPlaceholder>
+        <LogoPlaceholder onClick={() => navigate('/')}>
+        <img src={PantryLogo} alt="logo" style={{ width: 32, height: 32 }} />
+        </LogoPlaceholder>
       </LeftAligned>
       {user ? (
         <Button.Secondary onClick={handleLogoutClick}>Log Out</Button.Secondary>

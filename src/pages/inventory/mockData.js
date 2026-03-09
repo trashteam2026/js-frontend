@@ -1,0 +1,193 @@
+// Mock data for Inventory Dashboard
+// Based on seed_data.sql — remove this file when backend API is ready
+
+export const MOCK_CATEGORIES = [
+  {
+    id: 1,
+    name: 'Dairy',
+    parent_group: 'food',
+    display_order: 1,
+    items: [
+      {
+        id: 1,
+        name: 'Cottage Cheese',
+        total_quantity: 0,
+        low_stock_threshold: 20,
+        status: 'out_of_stock',
+      },
+      {
+        id: 2,
+        name: 'Eggs',
+        total_quantity: 176,
+        low_stock_threshold: 20,
+        status: 'normal',
+      },
+      {
+        id: 3,
+        name: 'Milk',
+        total_quantity: 15,
+        low_stock_threshold: 50,
+        status: 'low_stock',
+      },
+      {
+        id: 16,
+        name: 'Bacon',
+        total_quantity: 0,
+        low_stock_threshold: 20,
+        status: 'out_of_stock',
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Canned Fruits and Vegetables',
+    parent_group: 'food',
+    display_order: 2,
+    items: [
+      {
+        id: 4,
+        name: 'Canned Corn',
+        total_quantity: 100,
+        low_stock_threshold: 30,
+        status: 'normal',
+      },
+      {
+        id: 5,
+        name: 'Black Beans',
+        total_quantity: 45,
+        low_stock_threshold: 30,
+        status: 'normal',
+      },
+      {
+        id: 6,
+        name: 'Canned Broccoli',
+        total_quantity: 0,
+        low_stock_threshold: 20,
+        status: 'out_of_stock',
+      },
+      {
+        id: 15,
+        name: 'Bananas',
+        total_quantity: 0,
+        low_stock_threshold: 30,
+        status: 'out_of_stock',
+      },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Canned Meat',
+    parent_group: 'food',
+    display_order: 3,
+    items: [
+      {
+        id: 7,
+        name: 'Canned Beef',
+        total_quantity: 0,
+        low_stock_threshold: 20,
+        status: 'out_of_stock',
+      },
+      {
+        id: 14,
+        name: 'Beef Jerky',
+        total_quantity: 0,
+        low_stock_threshold: 15,
+        status: 'out_of_stock',
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Pasta',
+    parent_group: 'food',
+    display_order: 4,
+    items: [
+      {
+        id: 8,
+        name: 'Angel Hair Pasta',
+        total_quantity: 67,
+        low_stock_threshold: 30,
+        status: 'normal',
+      },
+      {
+        id: 9,
+        name: 'Penne Pasta',
+        total_quantity: 23,
+        low_stock_threshold: 30,
+        status: 'low_stock',
+      },
+      {
+        id: 12,
+        name: 'Alfredo Sauce',
+        total_quantity: 42,
+        low_stock_threshold: 20,
+        status: 'normal',
+      },
+    ],
+  },
+  {
+    id: 5,
+    name: 'Soup',
+    parent_group: 'food',
+    display_order: 5,
+    items: [
+      {
+        id: 10,
+        name: 'Chicken Noodle Soup',
+        total_quantity: 623,
+        low_stock_threshold: 50,
+        status: 'normal',
+      },
+      {
+        id: 11,
+        name: 'Tomato Soup',
+        total_quantity: 163,
+        low_stock_threshold: 50,
+        status: 'normal',
+      },
+    ],
+  },
+  {
+    id: 6,
+    name: 'Cooking Oil',
+    parent_group: 'food',
+    display_order: 6,
+    items: [],
+  },
+  {
+    id: 7,
+    name: 'Tree Nuts',
+    parent_group: 'food',
+    display_order: 7,
+    items: [],
+  },
+  {
+    id: 8,
+    name: 'Shellfish',
+    parent_group: 'food',
+    display_order: 8,
+    items: [],
+  },
+  {
+    id: 9,
+    name: 'Cleaning Supplies',
+    parent_group: 'non_food',
+    display_order: 1,
+    items: [
+      {
+        id: 13,
+        name: 'Kleenex Tissue Boxes',
+        total_quantity: 35,
+        low_stock_threshold: 10,
+        status: 'normal',
+      },
+    ],
+  },
+  {
+    id: 10,
+    name: 'Household Goods',
+    parent_group: 'non_food',
+    display_order: 2,
+    items: [],
+  },
+];
