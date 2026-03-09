@@ -4,8 +4,11 @@ import styled from 'styled-components';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 
+import AddCategoryModal from './AddCategoryModal';
 import CategorySection from './CategorySection';
+import ItemDetailModal from './ItemDetailModal';
 import { MOCK_CATEGORIES } from './mockData';
+import SortMenu from './SortMenu';
 import TabBar from './TabBar';
 
 const PageWrapper = styled.div`
@@ -93,6 +96,10 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('alphabetical');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [showAddCategory, setShowAddCategory] = useState(false);
 
   const foodCategories = useMemo(
     () => MOCK_CATEGORIES.filter((c) => c.parent_group === 'food'),
@@ -107,16 +114,19 @@ export default function InventoryPage() {
   const filteredCategories = useMemo(() => {
     let categories = MOCK_CATEGORIES;
 
+    // Tab filter
     if (activeTab === 'food') {
       categories = categories.filter((c) => c.parent_group === 'food');
     } else if (activeTab === 'non_food') {
       categories = categories.filter((c) => c.parent_group === 'non_food');
     }
 
+    // Specific category filter
     if (selectedCategoryId) {
       categories = categories.filter((c) => c.id === selectedCategoryId);
     }
 
+    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       categories = categories
@@ -129,12 +139,34 @@ export default function InventoryPage() {
         .filter((cat) => cat.items.length > 0);
     }
 
+    // Sort items within each category
+    categories = categories.map((cat) => {
+      const sortedItems = [...cat.items];
+      if (sortBy === 'alphabetical') {
+        sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortBy === 'stock_asc') {
+        sortedItems.sort((a, b) => a.total_quantity - b.total_quantity);
+      } else if (sortBy === 'stock_desc') {
+        sortedItems.sort((a, b) => b.total_quantity - a.total_quantity);
+      }
+      return { ...cat, items: sortedItems };
+    });
+
     return categories;
-  }, [activeTab, selectedCategoryId, searchQuery]);
+  }, [activeTab, selectedCategoryId, searchQuery, sortBy]);
 
   const handleItemClick = (item) => {
+<<<<<<< Updated upstream
     // TODO: open ItemDetailModal
     console.log('Item clicked:', item.name);
+=======
+    setSelectedItemId(item.id);
+  };
+
+  const handleAddCategory = (data) => {
+    console.log('Add category:', data);
+    // TODO: API call when backend is ready
+>>>>>>> Stashed changes
   };
 
   return (
@@ -165,6 +197,8 @@ export default function InventoryPage() {
         nonFoodCategories={nonFoodCategories}
         selectedCategoryId={selectedCategoryId}
         onCategorySelect={setSelectedCategoryId}
+        onAddCategory={() => setShowAddCategory(true)}
+        onFilterAll={() => setShowSortMenu(true)}
       />
 
       <Content>
@@ -182,6 +216,30 @@ export default function InventoryPage() {
           ))
         )}
       </Content>
+
+      {showSortMenu && (
+        <SortMenu
+          activeSort={sortBy}
+          onSortChange={setSortBy}
+          onClose={() => setShowSortMenu(false)}
+          topOffset={105}
+        />
+      )}
+
+      {selectedItemId && (
+        <ItemDetailModal
+          itemId={selectedItemId}
+          onClose={() => setSelectedItemId(null)}
+        />
+      )}
+
+      {showAddCategory && (
+        <AddCategoryModal
+          categories={MOCK_CATEGORIES}
+          onClose={() => setShowAddCategory(false)}
+          onAdd={handleAddCategory}
+        />
+      )}
     </PageWrapper>
   );
 }
