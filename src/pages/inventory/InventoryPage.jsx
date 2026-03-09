@@ -1,99 +1,197 @@
 import { useMemo, useState } from 'react';
+import { FiSearch, FiUser } from 'react-icons/fi';
 
+import PantryLogo from '@/assets/icons/image-1.svg';
+import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
+import HistoryIcon from '@/assets/icons/tabler-icon-history.svg?react';
+import TableRowIcon from '@/assets/icons/tabler-icon-table-row.svg?react';
 import styled from 'styled-components';
-
-import PantryLogo from '@/assets/icons/pantry-logo.svg';
 
 import AddCategoryModal from './AddCategoryModal';
 import CategorySection from './CategorySection';
 import ItemDetailModal from './ItemDetailModal';
-import { MOCK_CATEGORIES } from './mockData';
 import SortMenu from './SortMenu';
 import TabBar from './TabBar';
+import { MOCK_CATEGORIES } from './mockData';
 
 const PageWrapper = styled.div`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f9fafb;
+  background-color: #ececec;
 `;
 
 const TopBar = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  gap: 14px;
+  padding: 8px 24px;
+  background-color: #ececec;
+  flex-shrink: 0;
 `;
 
 const LogoImg = styled.img`
-  width: 36px;
-  height: 36px;
+  width: 43px;
+  height: 43px;
   flex-shrink: 0;
 `;
 
 const PageTitle = styled.h1`
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: #111827;
   margin: 0;
   white-space: nowrap;
+  line-height: 1;
 `;
 
 const SearchWrapper = styled.div`
-  flex: 1;
+  flex: 0 1 455px;
+  display: flex;
+  margin-left: 2px;
+`;
+
+const SearchPill = styled.div`
+  width: 100%;
+  background-color: #d4dce8;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
-  max-width: 320px;
+  padding-left: 16px;
+  height: 40px;
 `;
 
 const SearchInput = styled.input`
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: #374151;
   outline: none;
-
-  &:focus {
-    border-color: #1e3a5f;
-  }
+  min-width: 0;
+  padding-right: 8px;
 
   &::placeholder {
-    color: #9ca3af;
+    color: #4b5563;
+    opacity: 1;
+  }
+`;
+
+const SearchButton = styled.button`
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 9999px;
+  background: #2c5e95;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
   }
 `;
 
 const NavIcons = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   margin-left: auto;
 `;
 
 const NavIcon = styled.button`
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  padding: 4px;
-  color: #374151;
-  border-radius: 4px;
+  padding: 0;
+  color: #4e4b57;
 
   &:hover {
-    background-color: #f3f4f6;
+    background: transparent;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+    stroke: currentColor;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: currentColor;
+  }
+`;
+
+const ActiveNavIcon = styled(NavIcon)`
+  background: transparent;
+  color: #2c5e95;
+
+  &:hover {
+    background: transparent;
+  }
+
+  svg,
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    color: #2c5e95;
+    stroke: #2c5e95 !important;
+  }
+`;
+
+const ProfileButton = styled.button`
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 9999px;
+  background-color: #2c5e95;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
   }
 `;
 
 const Content = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 4px 24px 22px;
 `;
 
 export default function InventoryPage() {
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('food');
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('alphabetical');
@@ -103,12 +201,12 @@ export default function InventoryPage() {
 
   const foodCategories = useMemo(
     () => MOCK_CATEGORIES.filter((c) => c.parent_group === 'food'),
-    [],
+    []
   );
 
   const nonFoodCategories = useMemo(
     () => MOCK_CATEGORIES.filter((c) => c.parent_group === 'non_food'),
-    [],
+    []
   );
 
   const filteredCategories = useMemo(() => {
@@ -133,7 +231,7 @@ export default function InventoryPage() {
         .map((cat) => ({
           ...cat,
           items: cat.items.filter((item) =>
-            item.name.toLowerCase().includes(query),
+            item.name.toLowerCase().includes(query)
           ),
         }))
         .filter((cat) => cat.items.length > 0);
@@ -167,21 +265,34 @@ export default function InventoryPage() {
   return (
     <PageWrapper>
       <TopBar>
-        <LogoImg src={PantryLogo} alt="New Trier Township" />
+        <LogoImg src={PantryLogo} alt='New Trier Township' />
         <PageTitle>New Trier Township Food Pantry Inventory</PageTitle>
         <SearchWrapper>
-          <SearchInput
-            type="text"
-            placeholder="Search for an item..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <SearchPill>
+            <SearchInput
+              type='text'
+              placeholder='Search for an item...'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <SearchButton title='Search'>
+              <FiSearch size={21} color='#ffffff' />
+            </SearchButton>
+          </SearchPill>
         </SearchWrapper>
         <NavIcons>
-          <NavIcon title="Inventory">📋</NavIcon>
-          <NavIcon title="Check In">📦</NavIcon>
-          <NavIcon title="Activity">🕐</NavIcon>
-          <NavIcon title="Profile">👤</NavIcon>
+          <ActiveNavIcon title='Inventory'>
+            <TableRowIcon />
+          </ActiveNavIcon>
+          <NavIcon title='Check In'>
+            <CashRegisterIcon style={{ color: '#4e4b57' }} />
+          </NavIcon>
+          <NavIcon title='Activity'>
+            <HistoryIcon style={{ color: '#4e4b57' }} />
+          </NavIcon>
+          <ProfileButton title='Profile'>
+            <FiUser size={24} color='#ffffff' />
+          </ProfileButton>
         </NavIcons>
       </TopBar>
 

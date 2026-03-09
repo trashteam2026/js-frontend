@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import styled from 'styled-components';
-
+import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { Button } from '@/common/components/atoms/Button';
 import { useUser } from '@/common/contexts/UserContext';
+import styled from 'styled-components';
 
 import LogoutModal from './LogoutModal';
-import PantryLogo from '@/assets/icons/pantry-logo.svg';
-
 
 const StyledNav = styled.nav`
   display: flex;
@@ -57,7 +55,7 @@ export default function NavBar() {
     <StyledNav>
       <LeftAligned>
         <LogoPlaceholder onClick={() => navigate('/')}>
-        <img src={PantryLogo} alt="logo" style={{ width: 32, height: 32 }} />
+          <img src={PantryLogo} alt='logo' style={{ width: 32, height: 32 }} />
         </LogoPlaceholder>
       </LeftAligned>
       {user ? (

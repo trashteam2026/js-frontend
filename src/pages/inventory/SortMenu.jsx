@@ -50,7 +50,12 @@ const SORT_OPTIONS = [
   { value: 'expiration', label: 'Expiration Dates' },
 ];
 
-export default function SortMenu({ activeSort, onSortChange, onClose, topOffset }) {
+export default function SortMenu({
+  activeSort,
+  onSortChange,
+  onClose,
+  topOffset,
+}) {
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -63,7 +68,11 @@ export default function SortMenu({ activeSort, onSortChange, onClose, topOffset 
 
   return (
     <Overlay onClick={onClose}>
-      <Menu $top={topOffset || 90} ref={menuRef} onClick={(e) => e.stopPropagation()}>
+      <Menu
+        $top={topOffset || 90}
+        ref={menuRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         {SORT_OPTIONS.map((opt) => (
           <MenuItem
             key={opt.value}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-
 import { FiPlus, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -55,6 +55,19 @@ const CloseButton = styled.button`
 
   &:hover {
     background: #1e3a6e;
+  }
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
   }
 `;
 
@@ -149,6 +162,19 @@ const AddTagButton = styled.button`
   &:hover {
     background: #1e3a6e;
   }
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
+  }
 `;
 
 const DoneButton = styled.button`
@@ -174,7 +200,7 @@ export default function AddCategoryModal({ categories, onClose, onAdd }) {
   const [moveFrom, setMoveFrom] = useState([]);
 
   const availableCategories = categories.filter(
-    (c) => !moveFrom.includes(c.id) && c.items.length === 0,
+    (c) => !moveFrom.includes(c.id) && c.items.length === 0
   );
 
   const handleAddTag = () => {
@@ -199,25 +225,28 @@ export default function AddCategoryModal({ categories, onClose, onAdd }) {
         <Header>
           <Title>Add Category</Title>
           <CloseButton onClick={onClose}>
-            <FiX />
+            <FiX color='#ffffff' />
           </CloseButton>
         </Header>
 
         <Field>
           <Label>Name</Label>
           <Input
-            type="text"
+            type='text'
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Category name"
+            placeholder='Category name'
           />
         </Field>
 
         <Field>
           <Label>In group</Label>
-          <Select value={parentGroup} onChange={(e) => setParentGroup(e.target.value)}>
-            <option value="food">Food</option>
-            <option value="non_food">Non-Food</option>
+          <Select
+            value={parentGroup}
+            onChange={(e) => setParentGroup(e.target.value)}
+          >
+            <option value='food'>Food</option>
+            <option value='non_food'>Non-Food</option>
           </Select>
         </Field>
 
@@ -236,7 +265,7 @@ export default function AddCategoryModal({ categories, onClose, onAdd }) {
               );
             })}
             <AddTagButton onClick={handleAddTag}>
-              <FiPlus size={14} />
+              <FiPlus size={14} color='#ffffff' />
             </AddTagButton>
           </TagsContainer>
         </Field>

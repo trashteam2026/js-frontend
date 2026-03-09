@@ -1,43 +1,37 @@
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
-const STATUS_COLORS = {
-  out_of_stock: '#f8b4b4',
-  low_stock: '#fde68a',
-  normal: 'transparent',
-};
-
 const Row = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 244px;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background-color: ${({ $status }) => STATUS_COLORS[$status] || 'transparent'};
-  border-bottom: 1px solid #e5e7eb;
+  min-height: 37px;
+  padding: 0;
+  background-color: ${({ $index }) =>
+    $index % 2 === 0 ? '#f1f1f3' : '#d3deec'};
   cursor: pointer;
-  transition: background-color 0.15s;
-
-  &:hover {
-    opacity: 0.85;
-  }
 `;
 
 const ItemName = styled.span`
   font-size: 14px;
-  color: #1f2937;
+  color: #111827;
+  padding: 0 10px;
 `;
 
 const Quantity = styled.span`
   font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-  min-width: 40px;
-  text-align: right;
+  font-weight: 400;
+  color: #111827;
+  text-align: center;
+  border-left: 1px solid #2c5e95;
+  min-height: 37px;
+  display: grid;
+  place-items: center;
 `;
 
-export default function ItemRow({ item, onClick }) {
+export default function ItemRow({ item, index, onClick }) {
   return (
-    <Row $status={item.status} onClick={() => onClick?.(item)}>
+    <Row $index={index} onClick={() => onClick?.(item)}>
       <ItemName>{item.name}</ItemName>
       <Quantity>{item.total_quantity}</Quantity>
     </Row>
@@ -51,5 +45,6 @@ ItemRow.propTypes = {
     total_quantity: PropTypes.number.isRequired,
     status: PropTypes.oneOf(['out_of_stock', 'low_stock', 'normal']).isRequired,
   }).isRequired,
+  index: PropTypes.number,
   onClick: PropTypes.func,
 };

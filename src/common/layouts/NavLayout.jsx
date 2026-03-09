@@ -1,8 +1,7 @@
 import { Outlet } from 'react-router-dom';
 
-import styled from 'styled-components';
-
 import NavBar from '@/common/components/navigation/NavBar';
+import styled from 'styled-components';
 
 const Layout = styled.div`
   height: 100vh;

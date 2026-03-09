@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { FiFilter, FiPlus } from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
@@ -6,85 +7,126 @@ import styled from 'styled-components';
 const TabContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 0;
-  border-bottom: 2px solid #e5e7eb;
-  padding: 0 16px;
+  gap: 12px;
+  padding: 8px 24px 10px;
   position: relative;
 `;
 
-const Tab = styled.button`
+const TabsPill = styled.div`
+  flex: 1;
+  background: #c8d4e6;
+  border-radius: 9999px;
+  height: 50px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  overflow: visible;
+`;
+
+const TabButton = styled.button`
+  position: relative;
   background: none;
   border: none;
-  padding: 10px 20px;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: ${({ $active }) => ($active ? '700' : '600')};
+  color: ${({ $active }) => ($active ? '#2c5e95' : '#4f4f5b')};
   cursor: pointer;
-  color: ${({ $active }) => ($active ? '#1e3a5f' : '#6b7280')};
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#1e3a5f' : 'transparent')};
-  margin-bottom: -2px;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
   white-space: nowrap;
 
-  &:hover {
-    color: #1e3a5f;
+  &::after {
+    content: '';
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px;
+    background: ${({ $active }) => ($active ? '#2c5e95' : 'transparent')};
   }
 `;
 
+const TabText = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const TabCaret = styled.span`
+  font-size: 0.95em;
+  line-height: 1;
+`;
+
 const RightSection = styled.div`
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 `;
 
 const AddButton = styled.button`
-  background-color: #1e3a5f;
+  background-color: #2c5e95;
   color: #ffffff;
   border: none;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  font-size: 18px;
+  width: 48px;
+  height: 48px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    background-color: #2d4a6f;
+    background-color: #255282;
+  }
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
   }
 `;
 
 const FilterAllButton = styled.button`
   background: none;
   border: none;
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2c5e95;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
-
-  &:hover {
-    color: #1e3a5f;
-  }
+  gap: 8px;
+  padding: 0;
 `;
 
 const DropdownWrapper = styled.div`
   position: relative;
-  display: inline-block;
+  width: 100%;
+  height: 100%;
 `;
 
 const Dropdown = styled.div`
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #c7d2e3;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(24, 39, 75, 0.16);
   min-width: 200px;
-  z-index: 10;
-  margin-top: 4px;
+  z-index: 20;
 `;
 
 const DropdownItem = styled.button`
@@ -93,15 +135,15 @@ const DropdownItem = styled.button`
   text-align: left;
   background: none;
   border: none;
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 10px 16px;
+  font-size: 14px;
   cursor: pointer;
-  color: ${({ $active }) => ($active ? '#1e3a5f' : '#374151')};
+  color: ${({ $active }) => ($active ? '#2c5e95' : '#374151')};
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  background-color: ${({ $active }) => ($active ? '#eff6ff' : 'transparent')};
+  background-color: ${({ $active }) => ($active ? '#e9f1fb' : 'transparent')};
 
   &:hover {
-    background-color: #f3f4f6;
+    background-color: #f3f6fb;
   }
 `;
 
@@ -157,72 +199,81 @@ export default function TabBar({
 
   return (
     <TabContainer ref={dropdownRef}>
-      <Tab $active={activeTab === 'all'} onClick={() => handleTabClick('all')}>
-        All Items
-      </Tab>
-
-      <DropdownWrapper>
-        <Tab
-          $active={activeTab === 'food'}
-          onClick={() => handleTabClick('food')}
+      <TabsPill>
+        <TabButton
+          $active={activeTab === 'all'}
+          onClick={() => handleTabClick('all')}
         >
-          Food Items ▼
-        </Tab>
-        {openDropdown === 'food' && (
-          <Dropdown>
-            <DropdownItem
-              $active={!selectedCategoryId}
-              onClick={() => handleCategoryClick(null)}
-            >
-              All Food Items
-            </DropdownItem>
-            {foodCategories.map((cat) => (
-              <DropdownItem
-                key={cat.id}
-                $active={selectedCategoryId === cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-              >
-                {cat.name}
-              </DropdownItem>
-            ))}
-          </Dropdown>
-        )}
-      </DropdownWrapper>
+          <TabText>All Items</TabText>
+        </TabButton>
 
-      <DropdownWrapper>
-        <Tab
-          $active={activeTab === 'non_food'}
-          onClick={() => handleTabClick('non_food')}
-        >
-          Non-Food Items ▼
-        </Tab>
-        {openDropdown === 'non_food' && (
-          <Dropdown>
-            <DropdownItem
-              $active={!selectedCategoryId}
-              onClick={() => handleCategoryClick(null)}
-            >
-              All Non-Food Items
-            </DropdownItem>
-            {nonFoodCategories.map((cat) => (
+        <DropdownWrapper>
+          <TabButton
+            $active={activeTab === 'food'}
+            onClick={() => handleTabClick('food')}
+          >
+            <TabText>
+              Food Items <TabCaret>▼</TabCaret>
+            </TabText>
+          </TabButton>
+          {openDropdown === 'food' && (
+            <Dropdown>
               <DropdownItem
-                key={cat.id}
-                $active={selectedCategoryId === cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
+                $active={!selectedCategoryId}
+                onClick={() => handleCategoryClick(null)}
               >
-                {cat.name}
+                All Food Items
               </DropdownItem>
-            ))}
-          </Dropdown>
-        )}
-      </DropdownWrapper>
+              {foodCategories.map((cat) => (
+                <DropdownItem
+                  key={cat.id}
+                  $active={selectedCategoryId === cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                >
+                  {cat.name}
+                </DropdownItem>
+              ))}
+            </Dropdown>
+          )}
+        </DropdownWrapper>
+
+        <DropdownWrapper>
+          <TabButton
+            $active={activeTab === 'non_food'}
+            onClick={() => handleTabClick('non_food')}
+          >
+            <TabText>
+              Non-Food Items <TabCaret>▼</TabCaret>
+            </TabText>
+          </TabButton>
+          {openDropdown === 'non_food' && (
+            <Dropdown>
+              <DropdownItem
+                $active={!selectedCategoryId}
+                onClick={() => handleCategoryClick(null)}
+              >
+                All Non-Food Items
+              </DropdownItem>
+              {nonFoodCategories.map((cat) => (
+                <DropdownItem
+                  key={cat.id}
+                  $active={selectedCategoryId === cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                >
+                  {cat.name}
+                </DropdownItem>
+              ))}
+            </Dropdown>
+          )}
+        </DropdownWrapper>
+      </TabsPill>
 
       <RightSection>
-        <AddButton title="Add Category" onClick={onAddCategory}>
-          <FiPlus />
+        <AddButton title='Add Category' onClick={onAddCategory}>
+          <FiPlus size={26} color='#ffffff' />
         </AddButton>
         <FilterAllButton onClick={onFilterAll}>
-          <span>Filter All</span> <FiFilter size={14} />
+          <span>Filter All</span> <FiFilter size={24} strokeWidth={2.2} />
         </FilterAllButton>
       </RightSection>
     </TabContainer>

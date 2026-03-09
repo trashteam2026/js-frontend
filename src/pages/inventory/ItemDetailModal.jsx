@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-
 import { FiEdit2, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -147,8 +147,7 @@ const GridCell = styled.td`
   text-align: center;
   color: ${({ $value }) => ($value === 0 ? '#c8d0dc' : '#1a2b4a')};
   font-weight: ${({ $value }) => ($value > 0 ? '500' : '400')};
-  background-color: ${({ $value }) =>
-    $value > 0 ? '#f0f6ff' : 'transparent'};
+  background-color: ${({ $value }) => ($value > 0 ? '#f0f6ff' : 'transparent')};
   border: 1px solid #e8ecf2;
 `;
 
@@ -168,7 +167,9 @@ export default function ItemDetailModal({ itemId, onClose }) {
     if (!detail || !detail.batches) return null;
 
     // Check if all batches have null expiration
-    const hasExpiration = detail.batches.some((b) => b.expiration_date !== null);
+    const hasExpiration = detail.batches.some(
+      (b) => b.expiration_date !== null
+    );
     if (!hasExpiration) return null;
 
     // Group batches by year and month
@@ -209,7 +210,7 @@ export default function ItemDetailModal({ itemId, onClose }) {
         <InfoRow>
           <InfoLabel>Low Status Count:</InfoLabel>
           <InfoValue>{detail.low_stock_threshold}</InfoValue>
-          <EditIcon title="Edit threshold">
+          <EditIcon title='Edit threshold'>
             <FiEdit2 size={14} />
           </EditIcon>
         </InfoRow>
@@ -220,7 +221,7 @@ export default function ItemDetailModal({ itemId, onClose }) {
             {gridData && (
               <OmitZerosLabel>
                 <input
-                  type="checkbox"
+                  type='checkbox'
                   checked={omitZeros}
                   onChange={(e) => setOmitZeros(e.target.checked)}
                 />
@@ -247,7 +248,11 @@ export default function ItemDetailModal({ itemId, onClose }) {
                       {gridData.months.map((month) => {
                         const val = gridData.yearMap[year]?.[month] || 0;
                         if (omitZeros && val === 0) {
-                          return <GridCell key={month} $value={0}>—</GridCell>;
+                          return (
+                            <GridCell key={month} $value={0}>
+                              —
+                            </GridCell>
+                          );
                         }
                         return (
                           <GridCell key={month} $value={val}>
@@ -261,7 +266,9 @@ export default function ItemDetailModal({ itemId, onClose }) {
               </Grid>
             </GridWrapper>
           ) : (
-            <NoExpiration>No expiration date tracked for this item.</NoExpiration>
+            <NoExpiration>
+              No expiration date tracked for this item.
+            </NoExpiration>
           )}
         </ExpirationSection>
       </Modal>
