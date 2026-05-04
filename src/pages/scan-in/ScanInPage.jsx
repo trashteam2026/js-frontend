@@ -210,7 +210,7 @@ export default function ScanInPage() {
   const [view, setView] = useState('camera');
   const [formMode, setFormMode] = useState('scanned');
   const [pendingBarcode, setPendingBarcode] = useState(null);
-  const [pendingName, setPendingName] = useState('');
+  const [pendingLookup, setPendingLookup] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [categories, setCategories] = useState([]);
   const [cameraStatus, setCameraStatus] = useState('starting');
@@ -247,11 +247,11 @@ export default function ScanInPage() {
 
     const handleBarcodeDetected = async (barcode) => {
       setPendingBarcode(barcode);
-      setPendingName('');
+      setPendingLookup(null);
 
       try {
         const lookupResult = await lookupByBarcode(barcode);
-        setPendingName(lookupResult?.productName || '');
+        setPendingLookup(lookupResult);
       } catch (err) {
         console.error('Barcode lookup error:', err);
       }
@@ -352,6 +352,7 @@ export default function ScanInPage() {
     const timer = setTimeout(() => {
       setConfirmation(null);
       setPendingBarcode(null);
+      setPendingLookup(null);
       setView('camera');
     }, 1500);
     return () => clearTimeout(timer);
@@ -359,7 +360,7 @@ export default function ScanInPage() {
 
   const goBackToScanner = () => {
     setPendingBarcode(null);
-    setPendingName('');
+    setPendingLookup(null);
     setConfirmation(null);
     setView('camera');
   };
@@ -374,7 +375,7 @@ export default function ScanInPage() {
 
   const handleAddManually = () => {
     setPendingBarcode(null);
-    setPendingName('');
+    setPendingLookup(null);
     setFormMode('manual');
     setView('form');
   };
@@ -393,7 +394,7 @@ export default function ScanInPage() {
   const handleConfirmationTap = () => {
     setConfirmation(null);
     setPendingBarcode(null);
-    setPendingName('');
+    setPendingLookup(null);
     setView('camera');
   };
 
@@ -444,10 +445,12 @@ export default function ScanInPage() {
 
       {view === 'form' && (
         <ItemForm
-          key={`${formMode}:${pendingBarcode || 'manual'}:${pendingName}`}
+          key={`${formMode}:${pendingBarcode || 'manual'}:${pendingLookup?.productName || ''}`}
           mode={formMode}
           initialBarcode={pendingBarcode}
-          initialName={pendingName}
+          initialCategory={pendingLookup?.categoryName || ''}
+          initialName={pendingLookup?.productName || ''}
+          lookupSource={pendingLookup?.source || null}
           categoryOptions={categories}
           onSubmit={handleFormSubmit}
           onCancel={goBackToScanner}

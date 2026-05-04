@@ -1,7 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import {
-  AuthenticatedRoute,
   MobileOnlyRoute,
   OwnerOnlyRoute,
   PublicOnlyRoute,
@@ -37,9 +36,7 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route element={<AuthenticatedRoute />}>
-            <Route path='scan-in' element={<ScanInPage />} />
-          </Route>
+          <Route path='scan-in' element={<ScanInPage />} />
 
           <Route element={<OwnerOnlyRoute />}>
             <Route path='inventory' element={<InventoryPage />} />

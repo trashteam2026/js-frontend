@@ -208,20 +208,24 @@ const SubmitButton = styled.button`
 export default function ItemForm({
   mode,
   initialBarcode,
+  initialCategory,
   initialName,
+  lookupSource,
   categoryOptions,
   onSubmit,
   onCancel,
 }) {
   const nameRef = useRef(null);
   const categoryRef = useRef(null);
+  const isDatabaseMatch = mode === 'scanned' && lookupSource === 'database';
   const [name, setName] = useState(initialName || '');
-  const [manualCategory, setManualCategory] = useState('');
+  const [manualCategory, setManualCategory] = useState(initialCategory || '');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [nameFocused, setNameFocused] = useState(false);
   const [categoryFocused, setCategoryFocused] = useState(false);
+  const [categoryMatchedByName, setCategoryMatchedByName] = useState(false);
   const [error, setError] = useState('');
 
   const allItems = useMemo(
@@ -232,11 +236,7 @@ export default function ItemForm({
     () => getAllCategoryNames(categoryOptions),
     [categoryOptions]
   );
-  const matchedCategory = useMemo(
-    () => findCategoryForItem(name, categoryOptions),
-    [categoryOptions, name]
-  );
-  const category = matchedCategory || manualCategory;
+  const category = manualCategory;
 
   const filteredItems = useMemo(() => {
     const q = name.trim().toLowerCase();
@@ -266,6 +266,13 @@ export default function ItemForm({
 
   const pickName = (value) => {
     setName(value);
+    const existingCategory = findCategoryForItem(value, categoryOptions);
+    if (existingCategory) {
+      setManualCategory(existingCategory);
+      setCategoryMatchedByName(true);
+    } else {
+      setCategoryMatchedByName(false);
+    }
     setNameFocused(false);
     setError('');
   };
@@ -295,13 +302,12 @@ export default function ItemForm({
     e.preventDefault();
     const trimmedName = name.trim();
     const trimmedCategory = category.trim();
-    const isExistingItem = Boolean(matchedCategory);
     if (!trimmedName) {
       setError('Please enter an item name');
       focusName();
       return;
     }
-    if (!isExistingItem && !trimmedCategory) {
+    if (!isDatabaseMatch && !trimmedCategory) {
       setError('Please choose a category for this new item');
       focusCategory();
       return;
@@ -336,7 +342,8 @@ export default function ItemForm({
   };
 
   const nameLabel = mode === 'scanned' ? 'Recognized Item' : 'Item';
-  const categoryLocked = Boolean(matchedCategory);
+  const categoryLocked = isDatabaseMatch || categoryMatchedByName;
+  const nameLocked = isDatabaseMatch;
 
   return (
     <>
@@ -356,7 +363,7 @@ export default function ItemForm({
         <Field>
           <FieldHeaderRow>
             <FieldLabel htmlFor='item-name'>{nameLabel}</FieldLabel>
-            {mode === 'scanned' && (
+            {mode === 'scanned' && !nameLocked && (
               <EditButton type='button' onClick={focusName}>
                 Edit <FiEdit2 size={12} />
               </EditButton>
@@ -367,15 +374,35 @@ export default function ItemForm({
             ref={nameRef}
             type='text'
             value={name}
+            readOnly={nameLocked}
             onChange={(e) => {
               setName(e.target.value);
+              setCategoryMatchedByName(false);
               setError('');
             }}
-            onFocus={() => setNameFocused(true)}
+            onFocus={() => {
+              if (!nameLocked) {
+                setNameFocused(true);
+              }
+            }}
             onBlur={() => setTimeout(() => setNameFocused(false), 150)}
             autoComplete='off'
-            placeholder={mode === 'manual' ? 'Type item name' : ''}
+            placeholder={
+              mode === 'manual'
+                ? 'Type item name'
+                : mode === 'scanned' && !name
+                  ? 'Enter item name'
+                  : ''
+            }
           />
+          {nameLocked && (
+            <BarcodeNote>This item already exists in inventory.</BarcodeNote>
+          )}
+          {mode === 'scanned' && !name && (
+            <BarcodeNote>
+              Item not recognized. Please manually enter the item name.
+            </BarcodeNote>
+          )}
           {nameFocused && filteredItems.length > 0 && (
             <Dropdown role='listbox'>
               {filteredItems.map((item) => (
@@ -425,22 +452,24 @@ export default function ItemForm({
           {categoryLocked && (
             <BarcodeNote>This item already exists in inventory.</BarcodeNote>
           )}
-          {!categoryLocked && categoryFocused && filteredCategories.length > 0 && (
-            <Dropdown role='listbox'>
-              {filteredCategories.map((c) => (
-                <DropdownItem
-                  key={c}
-                  role='option'
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pickCategory(c);
-                  }}
-                >
-                  {c}
-                </DropdownItem>
-              ))}
-            </Dropdown>
-          )}
+          {!categoryLocked &&
+            categoryFocused &&
+            filteredCategories.length > 0 && (
+              <Dropdown role='listbox'>
+                {filteredCategories.map((c) => (
+                  <DropdownItem
+                    key={c}
+                    role='option'
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickCategory(c);
+                    }}
+                  >
+                    {c}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            )}
         </Field>
 
         <Field>
@@ -498,7 +527,9 @@ export default function ItemForm({
 ItemForm.propTypes = {
   mode: PropTypes.oneOf(['scanned', 'manual']).isRequired,
   initialBarcode: PropTypes.string,
+  initialCategory: PropTypes.string,
   initialName: PropTypes.string,
+  lookupSource: PropTypes.string,
   categoryOptions: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.number,
@@ -511,6 +542,8 @@ ItemForm.propTypes = {
 
 ItemForm.defaultProps = {
   initialBarcode: null,
+  initialCategory: '',
   initialName: '',
+  lookupSource: null,
   categoryOptions: [],
 };
