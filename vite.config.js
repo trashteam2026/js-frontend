@@ -2,14 +2,13 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
-import mkcert from 'vite-plugin-mkcert';
 import svgr from 'vite-plugin-svgr';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), mkcert()],
+  plugins: [react(), svgr()],
   server: {
     host: true,
   },

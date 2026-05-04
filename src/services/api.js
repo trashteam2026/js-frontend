@@ -36,3 +36,13 @@ export const categoriesApi = {
   getAll: () => request('GET', '/categories'),
   create: (data) => request('POST', '/categories', data),
 };
+
+export const activityApi = {
+  getLogs: ({ start, end } = {}) => {
+    const params = new URLSearchParams();
+    if (start) params.set('start', start);
+    if (end) params.set('end', end);
+    const qs = params.toString();
+    return request('GET', `/activity${qs ? `?${qs}` : ''}`);
+  },
+};

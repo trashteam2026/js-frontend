@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiUser } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
@@ -198,6 +199,7 @@ const Content = styled.div`
 `;
 
 export default function InventoryPage() {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -386,7 +388,7 @@ export default function InventoryPage() {
           <NavIcon title='Check In'>
             <CashRegisterIcon style={{ color: '#4e4b57' }} />
           </NavIcon>
-          <NavIcon title='Activity'>
+          <NavIcon title='Activity' onClick={() => navigate('/activity')}>
             <HistoryIcon style={{ color: '#4e4b57' }} />
           </NavIcon>
           <ProfileWrapper ref={profileWrapperRef}>
