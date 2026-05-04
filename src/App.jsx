@@ -12,6 +12,7 @@ import Login from '@/pages/account/Login';
 import RequestPasswordReset from '@/pages/account/RequestPasswordReset';
 import ResetPassword from '@/pages/account/ResetPassword';
 import SignUp from '@/pages/account/SignUp';
+import ActivityLogPage from '@/pages/activity/ActivityLogPage';
 import InventoryPage from '@/pages/inventory/InventoryPage';
 import LandingPage from '@/pages/landing/LandingPage';
 import NotFound from '@/pages/not-found/NotFound';
@@ -42,6 +43,7 @@ export default function App() {
 
           <Route element={<OwnerOnlyRoute />}>
             <Route path='inventory' element={<InventoryPage />} />
+            <Route path='activity' element={<ActivityLogPage />} />
           </Route>
 
           <Route element={<PublicOnlyRoute />}>
