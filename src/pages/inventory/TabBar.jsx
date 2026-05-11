@@ -120,7 +120,7 @@ const DropdownWrapper = styled.div`
 const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  left: 18%;
   background: #ffffff;
   border: 1px solid #c7d2e3;
   border-radius: 10px;
@@ -176,18 +176,18 @@ export default function TabBar({
       onCategorySelect(null);
       setOpenDropdown(null);
     } else if (tab === 'food') {
-      if (openDropdown === 'food') {
-        setOpenDropdown(null);
+      if (activeTab === 'food') {
+        setOpenDropdown(openDropdown === 'food' ? null : 'food');
       } else {
         onTabChange('food');
-        setOpenDropdown('food');
+        setOpenDropdown(null);
       }
     } else if (tab === 'non_food') {
-      if (openDropdown === 'non_food') {
-        setOpenDropdown(null);
+      if (activeTab === 'non_food') {
+        setOpenDropdown(openDropdown === 'non_food' ? null : 'non_food');
       } else {
         onTabChange('non_food');
-        setOpenDropdown('non_food');
+        setOpenDropdown(null);
       }
     }
   };

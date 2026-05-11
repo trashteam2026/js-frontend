@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { FiFilter, FiLock, FiMinusCircle, FiPlus, FiPlusCircle } from 'react-icons/fi';
+import { FiEdit2, FiFilter, FiMinusCircle, FiPlus, FiPlusCircle } from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
@@ -141,7 +141,7 @@ const AddItemCancel = styled.button`
   &:hover { background: #f0f3f8; }
 `;
 
-export default function CategorySection({ category, onItemClick, onItemAdded }) {
+export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -185,9 +185,9 @@ export default function CategorySection({ category, onItemClick, onItemAdded }) 
     <Wrapper>
       <Header>
         <CategoryName>{category.name}</CategoryName>
-        <ActionCell type='button'>
+        <ActionCell type='button' onClick={() => onEditCategory?.(category)}>
           <span>Edit</span>
-          <FiLock size={17} />
+          <FiEdit2 size={15} />
         </ActionCell>
         <ActionCell type='button'>
           <span>Filter</span>
@@ -250,4 +250,5 @@ CategorySection.propTypes = {
   }).isRequired,
   onItemClick: PropTypes.func,
   onItemAdded: PropTypes.func,
+  onEditCategory: PropTypes.func,
 };

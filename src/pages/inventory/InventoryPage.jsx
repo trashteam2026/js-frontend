@@ -10,6 +10,8 @@ import styled from 'styled-components';
 
 import { categoriesApi, itemsApi } from '../../services/api';
 import AddCategoryModal from './AddCategoryModal';
+import DeleteCategoryModal from './DeleteCategoryModal';
+import EditCategoryModal from './EditCategoryModal';
 import CategorySection from './CategorySection';
 import ItemDetailModal from './ItemDetailModal';
 import ProfileDropdown from './ProfileDropdown';
@@ -211,6 +213,8 @@ export default function InventoryPage() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileWrapperRef = useRef(null);
 
@@ -340,6 +344,31 @@ export default function InventoryPage() {
     }
   }, []);
 
+  const handleRenameCategory = async (newName) => {
+    if (!categoryToEdit) return;
+    try {
+      const updated = await categoriesApi.update(categoryToEdit.id, { name: newName });
+      setCategories((prev) =>
+        prev.map((c) => (c.id === categoryToEdit.id ? { ...c, name: updated.name ?? newName } : c))
+      );
+      setCategoryToEdit(null);
+    } catch (err) {
+      console.error('Rename category error:', err);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    try {
+      await categoriesApi.delete(categoryToDelete.id);
+      setCategories((prev) => prev.filter((c) => c.id !== categoryToDelete.id));
+      setItems((prev) => prev.filter((i) => i.category_id !== categoryToDelete.id));
+      setCategoryToDelete(null);
+    } catch (err) {
+      console.error('Delete category error:', err);
+    }
+  };
+
   const handleAddCategory = async (data) => {
     try {
       const newCat = await categoriesApi.create({
@@ -430,6 +459,7 @@ export default function InventoryPage() {
               category={category}
               onItemClick={handleItemClick}
               onItemAdded={handleItemAdded}
+              onEditCategory={setCategoryToEdit}
             />
           ))
         )}
@@ -458,6 +488,26 @@ export default function InventoryPage() {
           categories={categoriesWithItems}
           onClose={() => setShowAddCategory(false)}
           onAdd={handleAddCategory}
+        />
+      )}
+
+      {categoryToEdit && !categoryToDelete && (
+        <EditCategoryModal
+          category={categoryToEdit}
+          onClose={() => setCategoryToEdit(null)}
+          onSave={handleRenameCategory}
+          onDeleteRequest={() => {
+            setCategoryToDelete(categoryToEdit);
+            setCategoryToEdit(null);
+          }}
+        />
+      )}
+
+      {categoryToDelete && (
+        <DeleteCategoryModal
+          category={categoryToDelete}
+          onClose={() => setCategoryToDelete(null)}
+          onConfirm={handleDeleteCategory}
         />
       )}
     </PageWrapper>
