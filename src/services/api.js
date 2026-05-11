@@ -35,6 +35,8 @@ export const batchesApi = {
 export const categoriesApi = {
   getAll: () => request('GET', '/categories'),
   create: (data) => request('POST', '/categories', data),
+  update: (id, data) => request('PUT', `/categories/${id}`, data),
+  delete: (id) => request('DELETE', `/categories/${id}`),
 };
 
 export const activityApi = {
