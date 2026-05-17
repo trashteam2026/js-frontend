@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiEdit2, FiFilter, FiMinusCircle, FiPlus, FiPlusCircle } from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
@@ -8,6 +8,7 @@ import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
 
 const Wrapper = styled.div`
+  position: relative;
   margin-bottom: 18px;
   border: 1px solid #2c5e95;
   border-radius: 14px;
@@ -141,6 +142,42 @@ const AddItemCancel = styled.button`
   &:hover { background: #f0f3f8; }
 `;
 
+const FilterMenu = styled.div`
+  position: absolute;
+  top: 36px;
+  right: 44px;
+  min-width: 170px;
+  background: #ffffff;
+  border: 1px solid #c7d2e3;
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(24, 39, 75, 0.16);
+  z-index: 10;
+  padding: 4px 0;
+`;
+
+const FilterMenuItem = styled.button`
+  width: 100%;
+  border: none;
+  background: ${({ $active }) => ($active ? '#e9f1fb' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#2c5e95' : '#374151')} !important;
+  cursor: pointer;
+  display: block;
+  font-size: 14px;
+  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  padding: 9px 14px;
+  text-align: left;
+
+  &:hover {
+    background: #f3f6fb;
+  }
+`;
+
+const FILTER_OPTIONS = [
+  { value: 'alphabetical', label: 'Alphabetical' },
+  { value: 'stock_desc', label: 'Stock (High to Low)' },
+  { value: 'stock_asc', label: 'Stock (Low to High)' },
+];
+
 export default function CategorySection({
   category,
   onItemClick,
@@ -151,7 +188,40 @@ export default function CategorySection({
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [categorySort, setCategorySort] = useState('alphabetical');
   const inputRef = useRef(null);
+  const filterButtonRef = useRef(null);
+  const filterMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showFilterMenu) return undefined;
+
+    const handleClickOutside = (e) => {
+      const clickedButton = filterButtonRef.current?.contains(e.target);
+      const clickedMenu = filterMenuRef.current?.contains(e.target);
+      if (!clickedButton && !clickedMenu) {
+        setShowFilterMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showFilterMenu]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...category.items];
+
+    if (categorySort === 'stock_desc') {
+      items.sort((a, b) => b.total_quantity - a.total_quantity);
+    } else if (categorySort === 'stock_asc') {
+      items.sort((a, b) => a.total_quantity - b.total_quantity);
+    } else {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return items;
+  }, [category.items, categorySort]);
 
   const startAdding = () => {
     setAddingItem(true);
@@ -194,7 +264,11 @@ export default function CategorySection({
           <span>Edit</span>
           <FiEdit2 size={15} />
         </ActionCell>
-        <ActionCell type='button'>
+        <ActionCell
+          ref={filterButtonRef}
+          type='button'
+          onClick={() => setShowFilterMenu((open) => !open)}
+        >
           <span>Filter</span>
           <FiFilter size={17} />
         </ActionCell>
@@ -202,12 +276,29 @@ export default function CategorySection({
           {isOpen ? <FiMinusCircle size={19} /> : <FiPlusCircle size={19} />}
         </CollapseButton>
       </Header>
+      {showFilterMenu && (
+        <FilterMenu ref={filterMenuRef}>
+          {FILTER_OPTIONS.map((option) => (
+            <FilterMenuItem
+              key={option.value}
+              type='button'
+              $active={categorySort === option.value}
+              onClick={() => {
+                setCategorySort(option.value);
+                setShowFilterMenu(false);
+              }}
+            >
+              {option.label}
+            </FilterMenuItem>
+          ))}
+        </FilterMenu>
+      )}
 
       <ItemList $isOpen={isOpen}>
         {category.items.length === 0 && !addingItem ? (
           <EmptyMessage>No items in this category</EmptyMessage>
         ) : (
-          category.items.map((item, index) => (
+          sortedItems.map((item, index) => (
             <ItemRow
               key={item.id}
               item={item}
