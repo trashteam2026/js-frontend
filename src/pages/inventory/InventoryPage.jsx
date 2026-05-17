@@ -486,7 +486,6 @@ export default function InventoryPage() {
 
       {showAddCategory && (
         <AddCategoryModal
-          categories={categoriesWithItems}
           onClose={() => setShowAddCategory(false)}
           onAdd={handleAddCategory}
         />
