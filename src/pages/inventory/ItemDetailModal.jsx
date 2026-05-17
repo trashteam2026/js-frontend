@@ -124,6 +124,18 @@ const InlineInput = styled.input`
   &::-webkit-inner-spin-button { opacity: 1; }
 `;
 
+const InlineSelect = styled.select`
+  min-width: 220px;
+  max-width: 100%;
+  padding: 3px 8px;
+  font-size: 15px;
+  border: 1px solid #2c5e95;
+  border-radius: 4px;
+  outline: none;
+  color: #1a2b4a;
+  background: #ffffff;
+`;
+
 const ExpirationSection = styled.div`
   margin-top: 20px;
 `;
@@ -316,6 +328,7 @@ const StatusText = styled.p`
 
 export default function ItemDetailModal({
   itemId,
+  categories,
   onClose,
   onItemDeleted,
   onItemUpdated,
@@ -341,6 +354,10 @@ export default function ItemDetailModal({
   const [editingThreshold, setEditingThreshold] = useState(false);
   const [thresholdInput, setThresholdInput] = useState('');
   const thresholdInputRef = useRef(null);
+
+  // Category editing
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [categoryInput, setCategoryInput] = useState('');
 
   // No-expiration batch qty editing
   const [editingBatchId, setEditingBatchId] = useState(null);
@@ -515,6 +532,33 @@ export default function ItemDetailModal({
     setEditingName(false);
   }, [detail?.name]);
 
+  const saveCategory = useCallback(async () => {
+    const nextCategoryId =
+      categoryInput === '' ? null : Number.parseInt(categoryInput, 10);
+    const currentCategoryId = detail?.category_id || null;
+
+    setEditingCategory(false);
+    if (nextCategoryId === currentCategoryId || saving) return;
+
+    setSaving(true);
+    try {
+      const updated = await itemsApi.update(itemId, {
+        category_id: nextCategoryId,
+      });
+      setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
+      onItemUpdated?.(updated);
+    } catch (err) {
+      console.error('Update item category error:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [categoryInput, detail?.category_id, itemId, onItemUpdated, saving]);
+
+  const cancelCategoryEdit = useCallback(() => {
+    setCategoryInput(detail?.category_id ? String(detail.category_id) : '');
+    setEditingCategory(false);
+  }, [detail?.category_id]);
+
   // ── No-exp batch qty save ───────────────────────────────────────────────────
   const saveBatchQty = useCallback(
     async (batchId) => {
@@ -652,6 +696,62 @@ export default function ItemDetailModal({
             )}
           </TitleActions>
         </TitleRow>
+
+        <InfoRow>
+          <InfoLabel>Category:</InfoLabel>
+          {editingCategory ? (
+            <>
+              <InlineSelect
+                value={categoryInput}
+                disabled={saving}
+                onChange={(e) => setCategoryInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveCategory();
+                  if (e.key === 'Escape') cancelCategoryEdit();
+                }}
+              >
+                <option value=''>Uncategorized</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </InlineSelect>
+              <EditIcon
+                type='button'
+                title='Save category'
+                onClick={saveCategory}
+                disabled={saving}
+              >
+                <FiCheck size={14} />
+              </EditIcon>
+              <EditIcon
+                type='button'
+                title='Cancel category edit'
+                onClick={cancelCategoryEdit}
+                disabled={saving}
+              >
+                <FiX size={14} />
+              </EditIcon>
+            </>
+          ) : (
+            <>
+              <InfoValue>{detail.category_name || 'Uncategorized'}</InfoValue>
+              <EditIcon
+                type='button'
+                title='Edit category'
+                onClick={() => {
+                  setCategoryInput(
+                    detail.category_id ? String(detail.category_id) : ''
+                  );
+                  setEditingCategory(true);
+                }}
+              >
+                <FiEdit2 size={14} />
+              </EditIcon>
+            </>
+          )}
+        </InfoRow>
 
         <InfoRow>
           <InfoLabel>Total Count:</InfoLabel>
@@ -842,7 +942,17 @@ export default function ItemDetailModal({
 
 ItemDetailModal.propTypes = {
   itemId: PropTypes.number.isRequired,
+  categories: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      name: PropTypes.string.isRequired,
+    })
+  ),
   onClose: PropTypes.func.isRequired,
   onItemDeleted: PropTypes.func,
   onItemUpdated: PropTypes.func,
+};
+
+ItemDetailModal.defaultProps = {
+  categories: [],
 };

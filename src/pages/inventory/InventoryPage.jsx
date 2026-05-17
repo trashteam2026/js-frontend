@@ -477,6 +477,7 @@ export default function InventoryPage() {
       {selectedItemId && (
         <ItemDetailModal
           itemId={selectedItemId}
+          categories={categories}
           onClose={handleModalClose}
           onItemDeleted={handleItemDeleted}
           onItemUpdated={handleItemUpdated}
