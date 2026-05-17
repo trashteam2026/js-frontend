@@ -141,7 +141,12 @@ const AddItemCancel = styled.button`
   &:hover { background: #f0f3f8; }
 `;
 
-export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
+export default function CategorySection({
+  category,
+  onItemClick,
+  onItemAdded,
+  onEditCategory,
+}) {
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiEdit2, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiCheck, FiEdit2, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
@@ -53,8 +53,36 @@ const Title = styled.h2`
   font-size: 22px;
   font-weight: 700;
   color: #1a2b4a;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 16px 0;
   padding-right: 32px;
+`;
+
+const TitleActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const TitleInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2b4a;
+  border: 1px solid #2c5e95;
+  border-radius: 4px;
+  outline: none;
 `;
 
 const InfoRow = styled.div`
@@ -299,6 +327,11 @@ export default function ItemDetailModal({
 
   const [omitZeros, setOmitZeros] = useState(false);
 
+  // Item name editing
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const nameInputRef = useRef(null);
+
   // Expiration grid cell editing
   const [editingCell, setEditingCell] = useState(null); // { year, month }
   const [cellInput, setCellInput] = useState('');
@@ -343,6 +376,13 @@ export default function ItemDetailModal({
       thresholdInputRef.current.select();
     }
   }, [editingThreshold]);
+
+  useEffect(() => {
+    if (editingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [editingName]);
 
   useEffect(() => {
     if (editingBatchId !== null && batchInputRef.current) {
@@ -448,6 +488,33 @@ export default function ItemDetailModal({
     }
   }, [thresholdInput, itemId, onItemUpdated, fetchDetail]);
 
+  const saveName = useCallback(async () => {
+    const nextName = nameInput.trim();
+
+    if (!nextName || nextName === detail?.name || saving) {
+      setNameInput(detail?.name || '');
+      setEditingName(false);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await itemsApi.update(itemId, { name: nextName });
+      setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
+      onItemUpdated?.(updated);
+      setEditingName(false);
+    } catch (err) {
+      console.error('Update item name error:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [detail?.name, itemId, nameInput, onItemUpdated, saving]);
+
+  const cancelNameEdit = useCallback(() => {
+    setNameInput(detail?.name || '');
+    setEditingName(false);
+  }, [detail?.name]);
+
   // ── No-exp batch qty save ───────────────────────────────────────────────────
   const saveBatchQty = useCallback(
     async (batchId) => {
@@ -536,7 +603,55 @@ export default function ItemDetailModal({
           <FiX />
         </CloseButton>
 
-        <Title>{detail.name}</Title>
+        <TitleRow>
+          {editingName ? (
+            <TitleInput
+              ref={nameInputRef}
+              value={nameInput}
+              disabled={saving}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName();
+                if (e.key === 'Escape') cancelNameEdit();
+              }}
+            />
+          ) : (
+            <Title>{detail.name}</Title>
+          )}
+          <TitleActions>
+            {editingName ? (
+              <>
+                <EditIcon
+                  type='button'
+                  title='Save item name'
+                  onClick={saveName}
+                  disabled={saving || !nameInput.trim()}
+                >
+                  <FiCheck size={16} />
+                </EditIcon>
+                <EditIcon
+                  type='button'
+                  title='Cancel name edit'
+                  onClick={cancelNameEdit}
+                  disabled={saving}
+                >
+                  <FiX size={16} />
+                </EditIcon>
+              </>
+            ) : (
+              <EditIcon
+                type='button'
+                title='Edit item name'
+                onClick={() => {
+                  setNameInput(detail.name);
+                  setEditingName(true);
+                }}
+              >
+                <FiEdit2 size={16} />
+              </EditIcon>
+            )}
+          </TitleActions>
+        </TitleRow>
 
         <InfoRow>
           <InfoLabel>Total Count:</InfoLabel>

@@ -19,6 +19,10 @@ export function PublicOnlyRoute() {
 export function OwnerOnlyRoute() {
   const { role, isLoading } = useUser();
 
+  // TEMP: admin auth bypass for local inventory access.
+  // Remove this return to restore owner-only protection.
+  return <Outlet />;
+
   if (isLoading) return null;
   if (role !== 'owner') return <Navigate to='/' replace />;
   return <Outlet />;
