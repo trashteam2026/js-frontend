@@ -33,6 +33,7 @@ const TopBar = styled.div`
   padding: 8px 24px;
   background-color: #ececec;
   flex-shrink: 0;
+  position: relative;
 
   @media (max-width: 767px) {
     gap: 8px;
@@ -83,12 +84,21 @@ const SearchWrapper = styled.div`
   flex: 0 1 455px;
   display: flex;
   margin-left: 2px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 455px;
 
   @media (max-width: 767px) {
     flex: 0 0 100%;
     order: 99;
     min-width: 0;
     margin-left: 0;
+    position: static;
+    top: auto;
+    transform: none;
+    width: auto;
   }
 `;
 
