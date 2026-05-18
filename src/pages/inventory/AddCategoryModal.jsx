@@ -185,7 +185,7 @@ export default function AddCategoryModal({ onClose, onAdd }) {
           </Select>
         </Field>
 
-        <DoneButton onClick={handleDone}>Done</DoneButton>
+        <DoneButton onClick={handleDone}>Add</DoneButton>
       </Modal>
     </Overlay>
   );
