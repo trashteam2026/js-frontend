@@ -37,6 +37,7 @@ const TopBar = styled.div`
   @media (max-width: 767px) {
     gap: 8px;
     padding: 8px 12px;
+    flex-wrap: wrap;
   }
 `;
 
@@ -70,7 +71,8 @@ const SearchWrapper = styled.div`
   margin-left: 2px;
 
   @media (max-width: 767px) {
-    flex: 1;
+    flex: 0 0 100%;
+    order: 99;
     min-width: 0;
     margin-left: 0;
   }
@@ -166,6 +168,11 @@ const NavIcon = styled.button`
   svg line,
   svg polyline {
     stroke: currentColor;
+  }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
   }
 `;
 

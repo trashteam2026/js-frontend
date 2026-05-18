@@ -133,6 +133,11 @@ const QtyButton = styled.button`
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
 `;
 
 const MobileRightControls = styled.div`
@@ -194,6 +199,10 @@ const PickInput = styled.input`
   box-sizing: border-box;
   &:focus {
     border-color: ${NAVY};
+  }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
   }
 `;
 

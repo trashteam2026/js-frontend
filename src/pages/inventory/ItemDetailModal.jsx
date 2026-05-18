@@ -47,6 +47,12 @@ const CloseButton = styled.button`
   padding: 4px;
   border-radius: 4px;
   &:hover { color: #1a2b4a; background-color: #f0f3f8; }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
 `;
 
 const Title = styled.h2`
@@ -94,6 +100,10 @@ const InlineInput = styled.input`
   outline: none;
   color: #1a2b4a;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const ExpirationSection = styled.div`
@@ -181,6 +191,10 @@ const CellInput = styled.input`
   color: #1a2b4a;
   font-weight: 500;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const NoExpirationBatches = styled.div`
@@ -225,6 +239,10 @@ const BatchQtyInput = styled.input`
   outline: none;
   color: #1a2b4a;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const DeleteBatchButton = styled.button`

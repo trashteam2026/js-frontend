@@ -88,6 +88,11 @@ const CollapseButton = styled.button`
   svg {
     color: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 `;
 
 const KebabCell = styled.div`
@@ -111,6 +116,11 @@ const KebabButton = styled.button`
 
   svg {
     color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
   }
 `;
 
@@ -194,6 +204,10 @@ const AddItemInput = styled.input`
   padding: 8px 12px;
   outline: none;
   &::placeholder { color: #9ba8bc; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const AddItemSave = styled.button`
@@ -206,6 +220,11 @@ const AddItemSave = styled.button`
   cursor: pointer;
   &:hover { background: #eef3fa; }
   &:disabled { color: #9ba8bc; cursor: default; }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 `;
 
 const AddItemCancel = styled.button`
@@ -216,6 +235,11 @@ const AddItemCancel = styled.button`
   border: none;
   cursor: pointer;
   &:hover { background: #f0f3f8; }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 `;
 
 export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {

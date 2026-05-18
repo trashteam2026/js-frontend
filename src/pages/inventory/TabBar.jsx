@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiFilter, FiPlus } from 'react-icons/fi';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -169,6 +170,10 @@ const DropdownItem = styled.button`
   &:hover {
     background-color: #f3f6fb;
   }
+
+  @media (max-width: 767px) {
+    min-height: 44px;
+  }
 `;
 
 export default function TabBar({
@@ -181,6 +186,7 @@ export default function TabBar({
   onAddCategory,
   onFilterAll,
 }) {
+  const isMobile = useIsMobile();
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
@@ -237,7 +243,7 @@ export default function TabBar({
             onClick={() => handleTabClick('food')}
           >
             <TabText>
-              Food Items <TabCaret>▼</TabCaret>
+              {isMobile ? 'Food' : 'Food Items'} <TabCaret>▼</TabCaret>
             </TabText>
           </TabButton>
           {openDropdown === 'food' && (
@@ -267,7 +273,7 @@ export default function TabBar({
             onClick={() => handleTabClick('non_food')}
           >
             <TabText>
-              Non-Food Items <TabCaret>▼</TabCaret>
+              {isMobile ? 'Non-Food' : 'Non-Food Items'} <TabCaret>▼</TabCaret>
             </TabText>
           </TabButton>
           {openDropdown === 'non_food' && (

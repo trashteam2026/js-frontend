@@ -41,6 +41,16 @@ export const IconContainer = styled.div`
   right: 10px;
   top: 8px;
   cursor: pointer;
+
+  @media (max-width: 767px) {
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+  }
 `;
 
 export const StyledButton = styled(Button.Primary)`

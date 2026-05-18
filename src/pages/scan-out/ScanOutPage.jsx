@@ -117,6 +117,11 @@ const NavIcon = styled.button`
   svg polyline {
     stroke: currentColor;
   }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
 `;
 
 const ActiveNavIcon = styled(NavIcon)`

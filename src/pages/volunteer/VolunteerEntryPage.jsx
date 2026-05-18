@@ -41,6 +41,11 @@ const BackButton = styled.button`
     color: #ffffff;
     stroke: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
 `;
 
 const LogoSection = styled.div`

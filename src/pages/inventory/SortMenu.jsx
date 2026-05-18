@@ -41,6 +41,10 @@ const MenuItem = styled.button`
   &:hover {
     background-color: #f0f3f8;
   }
+
+  @media (max-width: 767px) {
+    min-height: 44px;
+  }
 `;
 
 const SORT_OPTIONS = [
