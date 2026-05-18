@@ -477,6 +477,7 @@ export default function InventoryPage() {
       {selectedItemId && (
         <ItemDetailModal
           itemId={selectedItemId}
+          categories={categories}
           onClose={handleModalClose}
           onItemDeleted={handleItemDeleted}
           onItemUpdated={handleItemUpdated}
@@ -485,7 +486,6 @@ export default function InventoryPage() {
 
       {showAddCategory && (
         <AddCategoryModal
-          categories={categoriesWithItems}
           onClose={() => setShowAddCategory(false)}
           onAdd={handleAddCategory}
         />

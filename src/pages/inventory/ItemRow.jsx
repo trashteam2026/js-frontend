@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 const Row = styled.div`
   display: grid;
-  grid-template-columns: 1fr 244px;
+  grid-template-columns: minmax(0, 1fr) 244px;
   align-items: center;
   min-height: 37px;
   padding: 0;
@@ -16,6 +16,8 @@ const ItemName = styled.span`
   font-size: 14px;
   color: #111827;
   padding: 0 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 `;
 
 const Quantity = styled.span`
