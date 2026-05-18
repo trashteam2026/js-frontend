@@ -57,7 +57,7 @@ const PageTitle = styled.h1`
   white-space: nowrap;
   line-height: 1;
 
-  @media (max-width: 1023px) {
+  @media (max-width: 1279px) {
     display: none;
   }
 `;
