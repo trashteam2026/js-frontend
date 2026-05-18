@@ -356,11 +356,6 @@ const MONTH_NAMES_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-function formatBatchMonthDay(dateStr) {
-  const d = new Date(String(dateStr).slice(0, 10) + 'T00:00:00');
-  return `${MONTH_NAMES_SHORT[d.getMonth()]} ${d.getDate()}`;
-}
-
 export default function ItemDetailModal({
   itemId,
   onClose,
@@ -462,26 +457,6 @@ export default function ItemDetailModal({
     () => (detail?.batches || []).filter((b) => b.expiration_date === null),
     [detail]
   );
-
-  // Mobile: dated batches grouped by year, sorted ascending by date
-  const datedBatchesByYear = useMemo(() => {
-    if (!detail) return [];
-    const dated = (detail.batches || [])
-      .filter((b) => b.expiration_date !== null)
-      .sort((a, b) =>
-        String(a.expiration_date).localeCompare(String(b.expiration_date))
-      );
-    const byYear = new Map();
-    for (const b of dated) {
-      const dateStr = String(b.expiration_date).slice(0, 10);
-      const year = new Date(dateStr + 'T00:00:00').getFullYear();
-      if (!byYear.has(year)) byYear.set(year, []);
-      byYear.get(year).push(b);
-    }
-    return Array.from(byYear.entries())
-      .map(([year, batches]) => ({ year, batches }))
-      .sort((a, b) => a.year - b.year);
-  }, [detail]);
 
   // ── Grid cell save ──────────────────────────────────────────────────────────
   const saveCellEdit = useCallback(async () => {
@@ -687,54 +662,66 @@ export default function ItemDetailModal({
             </HintText>
           </ExpirationHeader>
 
-          {isMobile ? (
-            datedBatchesByYear.length === 0 ? (
-              <StatusText>No dated batches.</StatusText>
-            ) : (
+          {isMobile ? (() => {
+            const hasAnyQty = gridData.years.some((y) =>
+              gridData.months.some((m) => (gridData.yearMap[y]?.[m] || 0) > 0)
+            );
+            if (omitZeros && !hasAnyQty) {
+              return <StatusText>No dated batches.</StatusText>;
+            }
+            return (
               <MobileBatchList>
-                {datedBatchesByYear.map(({ year, batches }) => {
-                  const visible = omitZeros
-                    ? batches.filter(
-                        (b) =>
-                          b.quantity > 0 || editingBatchId === b.id
-                      )
-                    : batches;
-                  if (visible.length === 0) return null;
+                {gridData.years.map((year) => {
+                  const cells = gridData.months
+                    .map((month) => ({
+                      month,
+                      val: gridData.yearMap[year]?.[month] || 0,
+                    }))
+                    .filter(({ month, val }) =>
+                      omitZeros
+                        ? val > 0 ||
+                          (editingCell?.year === year &&
+                            editingCell?.month === month)
+                        : true
+                    );
+                  if (cells.length === 0) return null;
                   return (
                     <YearSection key={year}>
                       <YearHeader>{year}</YearHeader>
-                      {visible.map((batch) => {
-                        const isEditing = editingBatchId === batch.id;
+                      {cells.map(({ month, val }) => {
+                        const isEditing =
+                          editingCell?.year === year &&
+                          editingCell?.month === month;
                         return (
                           <DatedBatchRow
-                            key={batch.id}
+                            key={month}
                             onClick={() => {
                               if (isEditing) return;
-                              setEditingBatchId(batch.id);
-                              setBatchInput(String(batch.quantity));
+                              setEditingCell({ year, month });
+                              setCellInput(String(val));
                             }}
                           >
                             <BatchDateLabel>
-                              {formatBatchMonthDay(batch.expiration_date)}
+                              {MONTH_NAMES_SHORT[month - 1]} 1
                             </BatchDateLabel>
                             {isEditing ? (
                               <BatchQtyInput
-                                ref={batchInputRef}
+                                ref={cellInputRef}
                                 type='number'
                                 min='0'
                                 style={{ marginLeft: 'auto' }}
-                                value={batchInput}
-                                onChange={(e) => setBatchInput(e.target.value)}
+                                value={cellInput}
+                                onChange={(e) => setCellInput(e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
-                                onBlur={() => saveBatchQty(batch.id)}
+                                onBlur={saveCellEdit}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveBatchQty(batch.id);
-                                  if (e.key === 'Escape') setEditingBatchId(null);
+                                  if (e.key === 'Enter') saveCellEdit();
+                                  if (e.key === 'Escape') setEditingCell(null);
                                 }}
                               />
                             ) : (
                               <>
-                                <BatchQtyDisplay>{batch.quantity}</BatchQtyDisplay>
+                                <BatchQtyDisplay>{val}</BatchQtyDisplay>
                                 <FiEdit2 size={14} color='#6b7b95' />
                               </>
                             )}
@@ -745,8 +732,8 @@ export default function ItemDetailModal({
                   );
                 })}
               </MobileBatchList>
-            )
-          ) : (
+            );
+          })() : (
             <GridWrapper>
               <Grid>
                 <thead>
