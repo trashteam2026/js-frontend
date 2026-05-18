@@ -26,7 +26,7 @@ const Modal = styled.div`
   background: #ffffff;
   border-radius: 10px;
   padding: 28px 32px 24px;
-  width: min(560px, calc(100vw - 24px));
+  width: min(440px, calc(100vw - 40px));
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
