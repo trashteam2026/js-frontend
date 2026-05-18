@@ -47,7 +47,7 @@ const MenuItem = styled.button`
   }
 `;
 
-const SORT_OPTIONS = [
+export const SORT_OPTIONS = [
   { value: 'alphabetical', label: 'Alphabetical' },
   { value: 'stock_asc', label: 'Ascending Stock' },
   { value: 'stock_desc', label: 'Descending Stock' },

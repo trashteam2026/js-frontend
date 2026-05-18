@@ -15,6 +15,7 @@ import useIsMobile from '@/common/hooks/useIsMobile';
 
 import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
+import { SORT_OPTIONS } from './SortMenu';
 
 const Wrapper = styled.div`
   margin-bottom: 18px;
@@ -105,15 +106,15 @@ const FilterTrigger = styled.button`
 `;
 
 const FilterPopover = styled.div`
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
+  top: ${({ $top }) => $top}px;
+  right: ${({ $right }) => $right}px;
   background: #ffffff;
   border: 1px solid #c7d2e3;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
-  min-width: 160px;
-  z-index: 10;
+  min-width: 200px;
+  z-index: 51;
   overflow: hidden;
 `;
 
@@ -303,12 +304,6 @@ const AddItemCancel = styled.button`
   }
 `;
 
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'low_stock', label: 'Low Stock' },
-  { value: 'out_of_stock', label: 'Out of Stock' },
-];
-
 export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
@@ -316,8 +311,9 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
   const [newItemName, setNewItemName] = useState('');
   const [saving, setSaving] = useState(false);
   const [kebabOpen, setKebabOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterMode, setFilterMode] = useState('all');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortMode, setSortMode] = useState('alphabetical');
+  const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
   const inputRef = useRef(null);
   const kebabRef = useRef(null);
   const filterRef = useRef(null);
@@ -334,14 +330,14 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
   }, [kebabOpen]);
 
   useEffect(() => {
-    if (!filterOpen) return undefined;
+    if (!sortOpen) return undefined;
     const handleClickOutside = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target)) {
-        setFilterOpen(false);
+        setSortOpen(false);
       }
     };
     const handleKey = (e) => {
-      if (e.key === 'Escape') setFilterOpen(false);
+      if (e.key === 'Escape') setSortOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKey);
@@ -349,12 +345,30 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKey);
     };
-  }, [filterOpen]);
+  }, [sortOpen]);
 
-  const visibleItems = filterMode === 'all'
-    ? category.items
-    : category.items.filter((item) => item.status === filterMode);
-  const isFiltered = filterMode !== 'all';
+  const toggleSortMenu = () => {
+    if (!sortOpen && filterRef.current) {
+      const rect = filterRef.current.getBoundingClientRect();
+      setPopoverPos({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    }
+    setSortOpen((o) => !o);
+  };
+
+  const sortedItems = (() => {
+    const items = [...category.items];
+    if (sortMode === 'alphabetical') {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortMode === 'stock_asc') {
+      items.sort((a, b) => a.total_quantity - b.total_quantity);
+    } else if (sortMode === 'stock_desc') {
+      items.sort((a, b) => b.total_quantity - a.total_quantity);
+    }
+    return items;
+  })();
 
   const startAdding = () => {
     setAddingItem(true);
@@ -400,25 +414,25 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
         <FilterCell ref={filterRef}>
           <FilterTrigger
             type='button'
-            onClick={() => setFilterOpen((o) => !o)}
+            onClick={toggleSortMenu}
             aria-haspopup='menu'
-            aria-expanded={filterOpen}
+            aria-expanded={sortOpen}
           >
             <span>Filter</span>
             <FiFilter size={17} />
           </FilterTrigger>
-          {filterOpen && (
-            <FilterPopover role='menu'>
-              {FILTER_OPTIONS.map((opt) => (
+          {sortOpen && (
+            <FilterPopover role='menu' $top={popoverPos.top} $right={popoverPos.right}>
+              {SORT_OPTIONS.map((opt) => (
                 <FilterOption
                   key={opt.value}
                   type='button'
                   role='menuitemradio'
-                  aria-checked={filterMode === opt.value}
-                  $active={filterMode === opt.value}
+                  aria-checked={sortMode === opt.value}
+                  $active={sortMode === opt.value}
                   onClick={() => {
-                    setFilterMode(opt.value);
-                    setFilterOpen(false);
+                    setSortMode(opt.value);
+                    setSortOpen(false);
                   }}
                 >
                   {opt.label}
@@ -465,12 +479,10 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
       </Header>
 
       <ItemList $isOpen={isOpen}>
-        {visibleItems.length === 0 && !addingItem ? (
-          <EmptyMessage>
-            {isFiltered ? 'No items match this filter' : 'No items in this category'}
-          </EmptyMessage>
+        {sortedItems.length === 0 && !addingItem ? (
+          <EmptyMessage>No items in this category</EmptyMessage>
         ) : (
-          visibleItems.map((item, index) => (
+          sortedItems.map((item, index) => (
             <ItemRow
               key={item.id}
               item={item}
