@@ -73,6 +73,67 @@ const ActionCell = styled.button`
   }
 `;
 
+const FilterCell = styled.div`
+  position: relative;
+  display: grid;
+  min-height: 36px;
+  border-left: 1px solid #c5d4e8;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const FilterTrigger = styled.button`
+  border: none;
+  background: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  width: 100%;
+  padding: 0;
+
+  svg {
+    color: #ffffff;
+  }
+`;
+
+const FilterPopover = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #c7d2e3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
+  min-width: 160px;
+  z-index: 10;
+  overflow: hidden;
+`;
+
+const FilterOption = styled.button`
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: ${({ $active }) => ($active ? '#eef1f6' : 'transparent')};
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1a2b4a;
+  font-weight: ${({ $active }) => ($active ? '600' : '500')};
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f3f8;
+  }
+`;
+
 const CollapseButton = styled.button`
   background: none;
   border: none;
@@ -242,6 +303,12 @@ const AddItemCancel = styled.button`
   }
 `;
 
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'low_stock', label: 'Low Stock' },
+  { value: 'out_of_stock', label: 'Out of Stock' },
+];
+
 export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
@@ -249,8 +316,11 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
   const [newItemName, setNewItemName] = useState('');
   const [saving, setSaving] = useState(false);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterMode, setFilterMode] = useState('all');
   const inputRef = useRef(null);
   const kebabRef = useRef(null);
+  const filterRef = useRef(null);
 
   useEffect(() => {
     if (!kebabOpen) return undefined;
@@ -262,6 +332,29 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [kebabOpen]);
+
+  useEffect(() => {
+    if (!filterOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setFilterOpen(false);
+      }
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setFilterOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [filterOpen]);
+
+  const visibleItems = filterMode === 'all'
+    ? category.items
+    : category.items.filter((item) => item.status === filterMode);
+  const isFiltered = filterMode !== 'all';
 
   const startAdding = () => {
     setAddingItem(true);
@@ -304,10 +397,36 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
           <span>Edit</span>
           <FiEdit2 size={15} />
         </ActionCell>
-        <ActionCell type='button'>
-          <span>Filter</span>
-          <FiFilter size={17} />
-        </ActionCell>
+        <FilterCell ref={filterRef}>
+          <FilterTrigger
+            type='button'
+            onClick={() => setFilterOpen((o) => !o)}
+            aria-haspopup='menu'
+            aria-expanded={filterOpen}
+          >
+            <span>Filter</span>
+            <FiFilter size={17} />
+          </FilterTrigger>
+          {filterOpen && (
+            <FilterPopover role='menu'>
+              {FILTER_OPTIONS.map((opt) => (
+                <FilterOption
+                  key={opt.value}
+                  type='button'
+                  role='menuitemradio'
+                  aria-checked={filterMode === opt.value}
+                  $active={filterMode === opt.value}
+                  onClick={() => {
+                    setFilterMode(opt.value);
+                    setFilterOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </FilterOption>
+              ))}
+            </FilterPopover>
+          )}
+        </FilterCell>
         {isMobile && (
           <KebabCell ref={kebabRef}>
             <KebabButton
@@ -346,10 +465,12 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
       </Header>
 
       <ItemList $isOpen={isOpen}>
-        {category.items.length === 0 && !addingItem ? (
-          <EmptyMessage>No items in this category</EmptyMessage>
+        {visibleItems.length === 0 && !addingItem ? (
+          <EmptyMessage>
+            {isFiltered ? 'No items match this filter' : 'No items in this category'}
+          </EmptyMessage>
         ) : (
-          category.items.map((item, index) => (
+          visibleItems.map((item, index) => (
             <ItemRow
               key={item.id}
               item={item}
