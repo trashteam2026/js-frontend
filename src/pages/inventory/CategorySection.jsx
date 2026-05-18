@@ -1,8 +1,17 @@
-import { useRef, useState } from 'react';
-import { FiEdit2, FiFilter, FiMinusCircle, FiPlus, FiPlusCircle } from 'react-icons/fi';
+import { useEffect, useRef, useState } from 'react';
+import {
+  FiEdit2,
+  FiFilter,
+  FiMinusCircle,
+  FiMoreVertical,
+  FiPlus,
+  FiPlusCircle,
+} from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
+
+import useIsMobile from '@/common/hooks/useIsMobile';
 
 import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
@@ -27,6 +36,10 @@ const Header = styled.div`
   &,
   & * {
     color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr 44px 44px;
   }
 `;
 
@@ -54,6 +67,10 @@ const ActionCell = styled.button`
   svg {
     color: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    display: none;
+  }
 `;
 
 const CollapseButton = styled.button`
@@ -70,6 +87,66 @@ const CollapseButton = styled.button`
 
   svg {
     color: #ffffff;
+  }
+`;
+
+const KebabCell = styled.div`
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+  border-left: 1px solid #c5d4e8;
+`;
+
+const KebabButton = styled.button`
+  background: none;
+  border: none;
+  color: #ffffff;
+  width: 100%;
+  height: 100%;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  svg {
+    color: #ffffff;
+  }
+`;
+
+const KebabPopover = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #c7d2e3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
+  min-width: 140px;
+  z-index: 10;
+  overflow: hidden;
+`;
+
+const KebabItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1a2b4a;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #f0f3f8;
+  }
+
+  svg {
+    color: #2c5e95;
   }
 `;
 
@@ -142,11 +219,25 @@ const AddItemCancel = styled.button`
 `;
 
 export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [kebabOpen, setKebabOpen] = useState(false);
   const inputRef = useRef(null);
+  const kebabRef = useRef(null);
+
+  useEffect(() => {
+    if (!kebabOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (kebabRef.current && !kebabRef.current.contains(e.target)) {
+        setKebabOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [kebabOpen]);
 
   const startAdding = () => {
     setAddingItem(true);
@@ -193,6 +284,38 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
           <span>Filter</span>
           <FiFilter size={17} />
         </ActionCell>
+        {isMobile && (
+          <KebabCell ref={kebabRef}>
+            <KebabButton
+              type='button'
+              onClick={() => setKebabOpen((o) => !o)}
+              aria-label='Category actions'
+            >
+              <FiMoreVertical size={18} />
+            </KebabButton>
+            {kebabOpen && (
+              <KebabPopover>
+                <KebabItem
+                  type='button'
+                  onClick={() => {
+                    setKebabOpen(false);
+                    onEditCategory?.(category);
+                  }}
+                >
+                  <FiEdit2 size={14} />
+                  Edit
+                </KebabItem>
+                <KebabItem
+                  type='button'
+                  onClick={() => setKebabOpen(false)}
+                >
+                  <FiFilter size={14} />
+                  Filter
+                </KebabItem>
+              </KebabPopover>
+            )}
+          </KebabCell>
+        )}
         <CollapseButton type='button' onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? <FiMinusCircle size={19} /> : <FiPlusCircle size={19} />}
         </CollapseButton>

@@ -6,6 +6,7 @@ import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
 import HistoryIcon from '@/assets/icons/tabler-icon-history.svg?react';
 import TableRowIcon from '@/assets/icons/tabler-icon-table-row.svg?react';
+import useIsMobile from '@/common/hooks/useIsMobile';
 import styled from 'styled-components';
 
 import { activityApi } from '../../services/api';
@@ -28,12 +29,22 @@ const TopBar = styled.div`
   padding: 8px 24px;
   background-color: #ececec;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    gap: 8px;
+    padding: 8px 12px;
+  }
 `;
 
 const LogoImg = styled.img`
   width: 43px;
   height: 43px;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    width: 32px;
+    height: 32px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -43,12 +54,22 @@ const PageTitle = styled.h1`
   margin: 0;
   white-space: nowrap;
   line-height: 1;
+
+  @media (max-width: 1023px) {
+    display: none;
+  }
 `;
 
 const SearchWrapper = styled.div`
   flex: 0 1 455px;
   display: flex;
   margin-left: 2px;
+
+  @media (max-width: 767px) {
+    flex: 1;
+    min-width: 0;
+    margin-left: 0;
+  }
 `;
 
 const SearchPill = styled.div`
@@ -107,6 +128,10 @@ const NavIcons = styled.div`
   align-items: center;
   gap: 18px;
   margin-left: auto;
+
+  @media (max-width: 767px) {
+    gap: 10px;
+  }
 `;
 
 const NavIcon = styled.button`
@@ -147,6 +172,55 @@ const ActiveNavIcon = styled(NavIcon)`
   }
 `;
 
+const DesktopOnlyNavIcon = styled(NavIcon)`
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const DesktopOnlyActiveNavIcon = styled(ActiveNavIcon)`
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const Fab = styled.button`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #2c5e95;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 6px 16px rgba(24, 39, 75, 0.25);
+    cursor: pointer;
+    z-index: 30;
+
+    svg {
+      color: #ffffff;
+      stroke: #ffffff;
+    }
+
+    svg path,
+    svg circle,
+    svg line,
+    svg polyline {
+      stroke: #ffffff;
+    }
+
+    &:hover {
+      background-color: #1e3a6e;
+    }
+  }
+`;
+
 const ProfileButton = styled.button`
   width: 48px;
   height: 48px;
@@ -182,6 +256,10 @@ const Content = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 8px 24px 32px;
+
+  @media (max-width: 767px) {
+    padding: 8px 12px 96px;
+  }
 `;
 
 const DateRangeRow = styled.div`
@@ -201,6 +279,10 @@ const DateRangeBtn = styled.button`
   align-items: center;
   gap: 6px;
   padding: 4px 0;
+
+  @media (max-width: 767px) {
+    font-size: 13px;
+  }
 `;
 
 const StatsSection = styled.div`
@@ -212,13 +294,27 @@ const StatsHeading = styled.h2`
   font-weight: 700;
   color: #111;
   margin: 0 0 14px;
+
+  @media (max-width: 767px) {
+    font-size: 18px;
+    margin: 0 0 10px;
+  }
 `;
 
 const StatsRow = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 36px;
   flex-wrap: wrap;
+  column-gap: 36px;
+  row-gap: 18px;
+
+  @media (max-width: 767px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
+    row-gap: 10px;
+    align-items: stretch;
+  }
 `;
 
 const StatBlock = styled.div`
@@ -226,6 +322,14 @@ const StatBlock = styled.div`
   flex-direction: column;
   align-items: flex-start;
   min-width: 70px;
+
+  @media (max-width: 767px) {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #d6dce8;
+    border-radius: 10px;
+    background: #ffffff;
+  }
 `;
 
 const StatNumber = styled.span`
@@ -233,6 +337,10 @@ const StatNumber = styled.span`
   font-weight: 700;
   color: ${(p) => p.$color || '#111'};
   line-height: 1;
+
+  @media (max-width: 767px) {
+    font-size: 30px;
+  }
 `;
 
 const StatLabel = styled.span`
@@ -242,10 +350,34 @@ const StatLabel = styled.span`
   line-height: 1.35;
   margin-top: 4px;
   white-space: pre-line;
+
+  @media (max-width: 767px) {
+    font-size: 11px;
+  }
+`;
+
+const ChartCell = styled.div`
+  flex: 1 0 100%;
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+  border: 1px solid #d6dce8;
+  border-radius: 10px;
+  background: #ffffff;
+
+  @media (max-width: 767px) {
+    grid-column: 1 / -1;
+    padding: 10px 12px;
+    overflow-x: auto;
+  }
 `;
 
 const DaySection = styled.div`
   margin-bottom: 36px;
+
+  @media (max-width: 767px) {
+    margin-bottom: 24px;
+  }
 `;
 
 const DayTitle = styled.h3`
@@ -253,6 +385,11 @@ const DayTitle = styled.h3`
   font-weight: 700;
   color: #111;
   margin: 0 0 10px;
+
+  @media (max-width: 767px) {
+    font-size: 18px;
+    margin: 0 0 8px;
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -285,6 +422,11 @@ const NameCell = styled.div`
   display: flex;
   align-items: center;
   border-right: 1px solid #2c5e95;
+
+  @media (max-width: 767px) {
+    padding: 0 8px;
+    font-size: 13px;
+  }
 `;
 
 const QtyCell = styled.div`
@@ -297,6 +439,12 @@ const QtyCell = styled.div`
   align-items: center;
   justify-content: center;
   border-right: 1px solid #2c5e95;
+
+  @media (max-width: 767px) {
+    width: 48px;
+    padding: 0 4px;
+    font-size: 13px;
+  }
 `;
 
 const TimeCell = styled.div`
@@ -308,6 +456,12 @@ const TimeCell = styled.div`
   display: flex;
   align-items: center;
   justify-content: flex-end;
+
+  @media (max-width: 767px) {
+    width: 72px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
 `;
 
 // ─── Bar Chart ────────────────────────────────────────────────────────────────
@@ -464,6 +618,7 @@ function defaultDateRange() {
 export default function ActivityLogPage() {
   const navigate = useNavigate();
   const profileWrapperRef = useRef(null);
+  const isMobile = useIsMobile();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -513,8 +668,18 @@ export default function ActivityLogPage() {
   return (
     <PageWrapper>
       <TopBar>
-        <LogoImg src={PantryLogo} alt="New Trier Township" />
-        <PageTitle>New Trier Township Food Pantry Inventory</PageTitle>
+        <LogoImg
+          src={PantryLogo}
+          alt="New Trier Township"
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        />
+        <PageTitle
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        >
+          New Trier Township Food Pantry Inventory
+        </PageTitle>
         <SearchWrapper>
           <SearchPill>
             <SearchInput
@@ -532,12 +697,15 @@ export default function ActivityLogPage() {
           <NavIcon title="Inventory" onClick={() => navigate('/inventory')}>
             <TableRowIcon />
           </NavIcon>
-          <NavIcon title="Check In">
+          <DesktopOnlyNavIcon
+            title="Scan Out"
+            onClick={() => navigate('/scan-out')}
+          >
             <CashRegisterIcon />
-          </NavIcon>
-          <ActiveNavIcon title="Activity">
+          </DesktopOnlyNavIcon>
+          <DesktopOnlyActiveNavIcon title="Activity">
             <HistoryIcon />
-          </ActiveNavIcon>
+          </DesktopOnlyActiveNavIcon>
           <ProfileWrapper ref={profileWrapperRef}>
             <ProfileButton
               title="Profile"
@@ -578,7 +746,9 @@ export default function ActivityLogPage() {
               <StatNumber $color="#ef4444">{stats.topRemovedQty}</StatNumber>
               <StatLabel $color="#ef4444">{`Top Item:\n${stats.topRemovedName}`}</StatLabel>
             </StatBlock>
-            <TrafficChart data={trafficData} />
+            <ChartCell>
+              <TrafficChart data={trafficData} />
+            </ChartCell>
           </StatsRow>
         </StatsSection>
 
@@ -625,6 +795,16 @@ export default function ActivityLogPage() {
           onChange={setDateRange}
           onClose={() => setShowDatePicker(false)}
         />
+      )}
+
+      {isMobile && (
+        <Fab
+          title="Scan Out"
+          aria-label="Scan Out"
+          onClick={() => navigate('/scan-out')}
+        >
+          <CashRegisterIcon />
+        </Fab>
       )}
     </PageWrapper>
   );

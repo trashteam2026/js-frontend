@@ -10,6 +10,10 @@ const Row = styled.div`
   background-color: ${({ $index }) =>
     $index % 2 === 0 ? '#f1f1f3' : '#d3deec'};
   cursor: pointer;
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr 72px;
+  }
 `;
 
 const ItemName = styled.span`

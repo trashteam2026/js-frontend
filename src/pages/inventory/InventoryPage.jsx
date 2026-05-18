@@ -6,6 +6,7 @@ import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
 import HistoryIcon from '@/assets/icons/tabler-icon-history.svg?react';
 import TableRowIcon from '@/assets/icons/tabler-icon-table-row.svg?react';
+import useIsMobile from '@/common/hooks/useIsMobile';
 import styled from 'styled-components';
 
 import { categoriesApi, itemsApi } from '../../services/api';
@@ -32,12 +33,22 @@ const TopBar = styled.div`
   padding: 8px 24px;
   background-color: #ececec;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    gap: 8px;
+    padding: 8px 12px;
+  }
 `;
 
 const LogoImg = styled.img`
   width: 43px;
   height: 43px;
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    width: 32px;
+    height: 32px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -47,12 +58,22 @@ const PageTitle = styled.h1`
   margin: 0;
   white-space: nowrap;
   line-height: 1;
+
+  @media (max-width: 1023px) {
+    display: none;
+  }
 `;
 
 const SearchWrapper = styled.div`
   flex: 0 1 455px;
   display: flex;
   margin-left: 2px;
+
+  @media (max-width: 767px) {
+    flex: 1;
+    min-width: 0;
+    margin-left: 0;
+  }
 `;
 
 const SearchPill = styled.div`
@@ -112,6 +133,10 @@ const NavIcons = styled.div`
   align-items: center;
   gap: 18px;
   margin-left: auto;
+
+  @media (max-width: 767px) {
+    gap: 10px;
+  }
 `;
 
 const NavIcon = styled.button`
@@ -162,6 +187,55 @@ const ActiveNavIcon = styled(NavIcon)`
   }
 `;
 
+const DesktopOnlyNavIcon = styled(NavIcon)`
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const DesktopOnlyActiveNavIcon = styled(ActiveNavIcon)`
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const Fab = styled.button`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #2c5e95;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 6px 16px rgba(24, 39, 75, 0.25);
+    cursor: pointer;
+    z-index: 30;
+
+    svg {
+      color: #ffffff;
+      stroke: #ffffff;
+    }
+
+    svg path,
+    svg circle,
+    svg line,
+    svg polyline {
+      stroke: #ffffff;
+    }
+
+    &:hover {
+      background-color: #1e3a6e;
+    }
+  }
+`;
+
 const ProfileButton = styled.button`
   width: 48px;
   height: 48px;
@@ -198,10 +272,15 @@ const Content = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 4px 24px 22px;
+
+  @media (max-width: 767px) {
+    padding: 4px 12px 96px;
+  }
 `;
 
 export default function InventoryPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -395,8 +474,18 @@ export default function InventoryPage() {
   return (
     <PageWrapper>
       <TopBar>
-        <LogoImg src={PantryLogo} alt='New Trier Township' />
-        <PageTitle>New Trier Township Food Pantry Inventory</PageTitle>
+        <LogoImg
+          src={PantryLogo}
+          alt='New Trier Township'
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        />
+        <PageTitle
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        >
+          New Trier Township Food Pantry Inventory
+        </PageTitle>
         <SearchWrapper>
           <SearchPill>
             <SearchInput
@@ -411,12 +500,15 @@ export default function InventoryPage() {
           </SearchPill>
         </SearchWrapper>
         <NavIcons>
-          <ActiveNavIcon title='Inventory'>
+          <DesktopOnlyActiveNavIcon title='Inventory'>
             <TableRowIcon />
-          </ActiveNavIcon>
-          <NavIcon title='Check In'>
+          </DesktopOnlyActiveNavIcon>
+          <DesktopOnlyNavIcon
+            title='Scan Out'
+            onClick={() => navigate('/scan-out')}
+          >
             <CashRegisterIcon style={{ color: '#4e4b57' }} />
-          </NavIcon>
+          </DesktopOnlyNavIcon>
           <NavIcon title='Activity' onClick={() => navigate('/activity')}>
             <HistoryIcon style={{ color: '#4e4b57' }} />
           </NavIcon>
@@ -509,6 +601,16 @@ export default function InventoryPage() {
           onClose={() => setCategoryToDelete(null)}
           onConfirm={handleDeleteCategory}
         />
+      )}
+
+      {isMobile && (
+        <Fab
+          title='Scan Out'
+          aria-label='Scan Out'
+          onClick={() => navigate('/scan-out')}
+        >
+          <CashRegisterIcon />
+        </Fab>
       )}
     </PageWrapper>
   );

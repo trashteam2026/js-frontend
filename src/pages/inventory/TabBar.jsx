@@ -10,6 +10,11 @@ const TabContainer = styled.div`
   gap: 12px;
   padding: 8px 24px 10px;
   position: relative;
+
+  @media (max-width: 767px) {
+    padding: 6px 12px 8px;
+    gap: 8px;
+  }
 `;
 
 const TabsPill = styled.div`
@@ -21,6 +26,10 @@ const TabsPill = styled.div`
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   overflow: visible;
+
+  @media (max-width: 767px) {
+    height: 42px;
+  }
 `;
 
 const TabButton = styled.button`
@@ -48,6 +57,11 @@ const TabButton = styled.button`
     height: 3px;
     border-radius: 3px;
     background: ${({ $active }) => ($active ? '#2c5e95' : 'transparent')};
+  }
+
+  @media (max-width: 767px) {
+    font-size: 13px;
+    padding: 0 8px;
   }
 `;
 
@@ -96,6 +110,11 @@ const AddButton = styled.button`
   svg polyline {
     stroke: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const FilterAllButton = styled.button`
@@ -109,6 +128,11 @@ const FilterAllButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 0;
+
+  @media (max-width: 767px) {
+    font-size: 13px;
+    gap: 4px;
+  }
 `;
 
 const DropdownWrapper = styled.div`
