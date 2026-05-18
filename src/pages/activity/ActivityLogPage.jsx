@@ -61,6 +61,24 @@ const PageTitle = styled.h1`
   }
 `;
 
+const MobileBrandTitle = styled.h1`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    line-height: 1;
+  }
+`;
+
 const SearchWrapper = styled.div`
   flex: 0 1 455px;
   display: flex;
@@ -687,6 +705,12 @@ export default function ActivityLogPage() {
         >
           New Trier Township Food Pantry Inventory
         </PageTitle>
+        <MobileBrandTitle
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        >
+          New Trier Township
+        </MobileBrandTitle>
         <SearchWrapper>
           <SearchPill>
             <SearchInput

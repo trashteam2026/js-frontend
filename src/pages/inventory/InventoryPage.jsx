@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiUser } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiUser } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
@@ -62,6 +62,24 @@ const PageTitle = styled.h1`
 
   @media (max-width: 1023px) {
     display: none;
+  }
+`;
+
+const MobileBrandTitle = styled.h1`
+  display: none;
+
+  @media (max-width: 767px) {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    line-height: 1;
   }
 `;
 
@@ -240,6 +258,13 @@ const Fab = styled.button`
     &:hover {
       background-color: #1e3a6e;
     }
+  }
+`;
+
+const AddFab = styled(Fab)`
+  @media (max-width: 767px) {
+    right: auto;
+    left: 18px;
   }
 `;
 
@@ -493,6 +518,12 @@ export default function InventoryPage() {
         >
           New Trier Township Food Pantry Inventory
         </PageTitle>
+        <MobileBrandTitle
+          onClick={() => navigate('/inventory')}
+          style={{ cursor: 'pointer' }}
+        >
+          New Trier Township
+        </MobileBrandTitle>
         <SearchWrapper>
           <SearchPill>
             <SearchInput
@@ -608,6 +639,16 @@ export default function InventoryPage() {
           onClose={() => setCategoryToDelete(null)}
           onConfirm={handleDeleteCategory}
         />
+      )}
+
+      {isMobile && (
+        <AddFab
+          title='Add Category'
+          aria-label='Add Category'
+          onClick={() => setShowAddCategory(true)}
+        >
+          <FiPlus size={26} />
+        </AddFab>
       )}
 
       {isMobile && (

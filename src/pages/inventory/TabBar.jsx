@@ -113,8 +113,7 @@ const AddButton = styled.button`
   }
 
   @media (max-width: 767px) {
-    width: 40px;
-    height: 40px;
+    display: none;
   }
 `;
 
@@ -133,6 +132,12 @@ const FilterAllButton = styled.button`
   @media (max-width: 767px) {
     font-size: 13px;
     gap: 4px;
+  }
+`;
+
+const FilterAllLabel = styled.span`
+  @media (max-width: 767px) {
+    display: none;
   }
 `;
 
@@ -302,8 +307,8 @@ export default function TabBar({
         <AddButton title='Add Category' onClick={onAddCategory}>
           <FiPlus size={26} color='#ffffff' />
         </AddButton>
-        <FilterAllButton onClick={onFilterAll}>
-          <span>Filter All</span> <FiFilter size={24} strokeWidth={2.2} />
+        <FilterAllButton onClick={onFilterAll} aria-label='Filter All'>
+          <FilterAllLabel>Filter All</FilterAllLabel> <FiFilter size={24} strokeWidth={2.2} />
         </FilterAllButton>
       </RightSection>
     </TabContainer>
