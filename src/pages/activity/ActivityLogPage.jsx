@@ -66,15 +66,11 @@ const MobileBrandTitle = styled.h1`
 
   @media (max-width: 767px) {
     display: block;
-    flex: 1;
-    min-width: 0;
     margin: 0;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     color: #111827;
     white-space: nowrap;
-    overflow: hidden;
     line-height: 1;
   }
 `;
