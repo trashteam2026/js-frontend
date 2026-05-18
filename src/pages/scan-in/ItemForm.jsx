@@ -41,6 +41,11 @@ const FloatingBack = styled.button`
     color: #ffffff;
     stroke: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
 `;
 
 const BarcodeNote = styled.p`
@@ -168,6 +173,11 @@ const QtyButton = styled.button`
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
   }
 `;
 

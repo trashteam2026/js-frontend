@@ -1,14 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { FiEdit2, FiFilter, FiMinusCircle, FiPlus, FiPlusCircle } from 'react-icons/fi';
+import { useEffect, useRef, useState } from 'react';
+import {
+  FiEdit2,
+  FiFilter,
+  FiMinusCircle,
+  FiMoreVertical,
+  FiPlus,
+  FiPlusCircle,
+} from 'react-icons/fi';
 
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
+
 import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
+import { SORT_OPTIONS } from './SortMenu';
 
 const Wrapper = styled.div`
-  position: relative;
   margin-bottom: 18px;
   border: 1px solid #2c5e95;
   border-radius: 14px;
@@ -28,6 +37,10 @@ const Header = styled.div`
   &,
   & * {
     color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr 44px 44px;
   }
 `;
 
@@ -55,6 +68,71 @@ const ActionCell = styled.button`
   svg {
     color: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const FilterCell = styled.div`
+  position: relative;
+  display: grid;
+  min-height: 36px;
+  border-left: 1px solid #c5d4e8;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const FilterTrigger = styled.button`
+  border: none;
+  background: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  width: 100%;
+  padding: 0;
+
+  svg {
+    color: #ffffff;
+  }
+`;
+
+const FilterPopover = styled.div`
+  position: fixed;
+  top: ${({ $top }) => $top}px;
+  right: ${({ $right }) => $right}px;
+  background: #ffffff;
+  border: 1px solid #c7d2e3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
+  min-width: 200px;
+  z-index: 51;
+  overflow: hidden;
+`;
+
+const FilterOption = styled.button`
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: ${({ $active }) => ($active ? '#eef1f6' : 'transparent')};
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1a2b4a;
+  font-weight: ${({ $active }) => ($active ? '600' : '500')};
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f3f8;
+  }
 `;
 
 const CollapseButton = styled.button`
@@ -71,6 +149,76 @@ const CollapseButton = styled.button`
 
   svg {
     color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+`;
+
+const KebabCell = styled.div`
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+  border-left: 1px solid #c5d4e8;
+`;
+
+const KebabButton = styled.button`
+  background: none;
+  border: none;
+  color: #ffffff;
+  width: 100%;
+  height: 100%;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  svg {
+    color: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+`;
+
+const KebabPopover = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #c7d2e3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
+  min-width: 140px;
+  z-index: 10;
+  overflow: hidden;
+`;
+
+const KebabItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1a2b4a;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #f0f3f8;
+  }
+
+  svg {
+    color: #2c5e95;
   }
 `;
 
@@ -118,6 +266,10 @@ const AddItemInput = styled.input`
   padding: 8px 12px;
   outline: none;
   &::placeholder { color: #9ba8bc; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const AddItemSave = styled.button`
@@ -130,6 +282,11 @@ const AddItemSave = styled.button`
   cursor: pointer;
   &:hover { background: #eef3fa; }
   &:disabled { color: #9ba8bc; cursor: default; }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 `;
 
 const AddItemCancel = styled.button`
@@ -140,88 +297,72 @@ const AddItemCancel = styled.button`
   border: none;
   cursor: pointer;
   &:hover { background: #f0f3f8; }
-`;
 
-const FilterMenu = styled.div`
-  position: absolute;
-  top: 36px;
-  right: 44px;
-  min-width: 170px;
-  background: #ffffff;
-  border: 1px solid #c7d2e3;
-  border-radius: 8px;
-  box-shadow: 0 8px 22px rgba(24, 39, 75, 0.16);
-  z-index: 10;
-  padding: 4px 0;
-`;
-
-const FilterMenuItem = styled.button`
-  width: 100%;
-  border: none;
-  background: ${({ $active }) => ($active ? '#e9f1fb' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#2c5e95' : '#374151')} !important;
-  cursor: pointer;
-  display: block;
-  font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  padding: 9px 14px;
-  text-align: left;
-
-  &:hover {
-    background: #f3f6fb;
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
   }
 `;
 
-const FILTER_OPTIONS = [
-  { value: 'alphabetical', label: 'Alphabetical' },
-  { value: 'stock_desc', label: 'Stock (High to Low)' },
-  { value: 'stock_asc', label: 'Stock (Low to High)' },
-];
-
 export default function CategorySection({
   category,
+  sortBy,
+  onSortChange,
   onItemClick,
   onItemAdded,
   onEditCategory,
 }) {
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [categorySort, setCategorySort] = useState('alphabetical');
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
   const inputRef = useRef(null);
-  const filterButtonRef = useRef(null);
-  const filterMenuRef = useRef(null);
+  const kebabRef = useRef(null);
+  const filterRef = useRef(null);
 
   useEffect(() => {
-    if (!showFilterMenu) return undefined;
-
+    if (!kebabOpen) return undefined;
     const handleClickOutside = (e) => {
-      const clickedButton = filterButtonRef.current?.contains(e.target);
-      const clickedMenu = filterMenuRef.current?.contains(e.target);
-      if (!clickedButton && !clickedMenu) {
-        setShowFilterMenu(false);
+      if (kebabRef.current && !kebabRef.current.contains(e.target)) {
+        setKebabOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showFilterMenu]);
+  }, [kebabOpen]);
 
-  const sortedItems = useMemo(() => {
-    const items = [...category.items];
+  useEffect(() => {
+    if (!sortOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setSortOpen(false);
+      }
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setSortOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [sortOpen]);
 
-    if (categorySort === 'stock_desc') {
-      items.sort((a, b) => b.total_quantity - a.total_quantity);
-    } else if (categorySort === 'stock_asc') {
-      items.sort((a, b) => a.total_quantity - b.total_quantity);
-    } else {
-      items.sort((a, b) => a.name.localeCompare(b.name));
+  const toggleSortMenu = () => {
+    if (!sortOpen && filterRef.current) {
+      const rect = filterRef.current.getBoundingClientRect();
+      setPopoverPos({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
     }
-
-    return items;
-  }, [category.items, categorySort]);
+    setSortOpen((o) => !o);
+  };
 
   const startAdding = () => {
     setAddingItem(true);
@@ -264,41 +405,78 @@ export default function CategorySection({
           <span>Edit</span>
           <FiEdit2 size={15} />
         </ActionCell>
-        <ActionCell
-          ref={filterButtonRef}
-          type='button'
-          onClick={() => setShowFilterMenu((open) => !open)}
-        >
-          <span>Filter</span>
-          <FiFilter size={17} />
-        </ActionCell>
+        <FilterCell ref={filterRef}>
+          <FilterTrigger
+            type='button'
+            onClick={toggleSortMenu}
+            aria-haspopup='menu'
+            aria-expanded={sortOpen}
+          >
+            <span>Filter</span>
+            <FiFilter size={17} />
+          </FilterTrigger>
+          {sortOpen && (
+            <FilterPopover role='menu' $top={popoverPos.top} $right={popoverPos.right}>
+              {SORT_OPTIONS.map((opt) => (
+                <FilterOption
+                  key={opt.value}
+                  type='button'
+                  role='menuitemradio'
+                  aria-checked={sortBy === opt.value}
+                  $active={sortBy === opt.value}
+                  onClick={() => {
+                    onSortChange?.(opt.value);
+                    setSortOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </FilterOption>
+              ))}
+            </FilterPopover>
+          )}
+        </FilterCell>
+        {isMobile && (
+          <KebabCell ref={kebabRef}>
+            <KebabButton
+              type='button'
+              onClick={() => setKebabOpen((o) => !o)}
+              aria-label='Category actions'
+            >
+              <FiMoreVertical size={18} />
+            </KebabButton>
+            {kebabOpen && (
+              <KebabPopover>
+                <KebabItem
+                  type='button'
+                  onClick={() => {
+                    setKebabOpen(false);
+                    onEditCategory?.(category);
+                  }}
+                >
+                  <FiEdit2 size={14} />
+                  Edit
+                </KebabItem>
+                <KebabItem
+                  type='button'
+                  onClick={() => setKebabOpen(false)}
+                >
+                  <FiFilter size={14} />
+                  Filter
+                </KebabItem>
+              </KebabPopover>
+            )}
+          </KebabCell>
+        )}
         <CollapseButton type='button' onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? <FiMinusCircle size={19} /> : <FiPlusCircle size={19} />}
         </CollapseButton>
       </Header>
-      {showFilterMenu && (
-        <FilterMenu ref={filterMenuRef}>
-          {FILTER_OPTIONS.map((option) => (
-            <FilterMenuItem
-              key={option.value}
-              type='button'
-              $active={categorySort === option.value}
-              onClick={() => {
-                setCategorySort(option.value);
-                setShowFilterMenu(false);
-              }}
-            >
-              {option.label}
-            </FilterMenuItem>
-          ))}
-        </FilterMenu>
-      )}
 
       <ItemList $isOpen={isOpen}>
         {category.items.length === 0 && !addingItem ? (
           <EmptyMessage>No items in this category</EmptyMessage>
         ) : (
-          sortedItems.map((item, index) => (
+          category.items.map((item, index) => (
             <ItemRow
               key={item.id}
               item={item}
@@ -344,6 +522,8 @@ CategorySection.propTypes = {
     name: PropTypes.string.isRequired,
     items: PropTypes.array.isRequired,
   }).isRequired,
+  sortBy: PropTypes.string,
+  onSortChange: PropTypes.func,
   onItemClick: PropTypes.func,
   onItemAdded: PropTypes.func,
   onEditCategory: PropTypes.func,

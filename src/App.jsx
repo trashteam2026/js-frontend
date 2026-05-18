@@ -16,6 +16,7 @@ import InventoryPage from '@/pages/inventory/InventoryPage';
 import LandingPage from '@/pages/landing/LandingPage';
 import NotFound from '@/pages/not-found/NotFound';
 import ScanInPage from '@/pages/scan-in/ScanInPage';
+import ScanOutPage from '@/pages/scan-out/ScanOutPage';
 import VolunteerEntryPage from '@/pages/volunteer/VolunteerEntryPage';
 
 import './App.css';
@@ -41,6 +42,7 @@ export default function App() {
           <Route element={<OwnerOnlyRoute />}>
             <Route path='inventory' element={<InventoryPage />} />
             <Route path='activity' element={<ActivityLogPage />} />
+            <Route path='scan-out' element={<ScanOutPage />} />
           </Route>
 
           <Route element={<PublicOnlyRoute />}>

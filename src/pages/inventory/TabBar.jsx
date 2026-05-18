@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiFilter, FiPlus } from 'react-icons/fi';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -10,6 +11,11 @@ const TabContainer = styled.div`
   gap: 12px;
   padding: 8px 24px 10px;
   position: relative;
+
+  @media (max-width: 767px) {
+    padding: 6px 12px 8px;
+    gap: 8px;
+  }
 `;
 
 const TabsPill = styled.div`
@@ -21,6 +27,10 @@ const TabsPill = styled.div`
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   overflow: visible;
+
+  @media (max-width: 767px) {
+    height: 42px;
+  }
 `;
 
 const TabButton = styled.button`
@@ -48,6 +58,11 @@ const TabButton = styled.button`
     height: 3px;
     border-radius: 3px;
     background: ${({ $active }) => ($active ? '#2c5e95' : 'transparent')};
+  }
+
+  @media (max-width: 767px) {
+    font-size: 13px;
+    padding: 0 8px;
   }
 `;
 
@@ -96,6 +111,10 @@ const AddButton = styled.button`
   svg polyline {
     stroke: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    display: none;
+  }
 `;
 
 const FilterAllButton = styled.button`
@@ -109,6 +128,17 @@ const FilterAllButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 0;
+
+  @media (max-width: 767px) {
+    font-size: 13px;
+    gap: 4px;
+  }
+`;
+
+const FilterAllLabel = styled.span`
+  @media (max-width: 767px) {
+    display: none;
+  }
 `;
 
 const DropdownWrapper = styled.div`
@@ -145,6 +175,10 @@ const DropdownItem = styled.button`
   &:hover {
     background-color: #f3f6fb;
   }
+
+  @media (max-width: 767px) {
+    min-height: 44px;
+  }
 `;
 
 export default function TabBar({
@@ -157,6 +191,7 @@ export default function TabBar({
   onAddCategory,
   onFilterAll,
 }) {
+  const isMobile = useIsMobile();
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
@@ -213,7 +248,7 @@ export default function TabBar({
             onClick={() => handleTabClick('food')}
           >
             <TabText>
-              Food Items <TabCaret>▼</TabCaret>
+              {isMobile ? 'Food' : 'Food Items'} <TabCaret>▼</TabCaret>
             </TabText>
           </TabButton>
           {openDropdown === 'food' && (
@@ -243,7 +278,7 @@ export default function TabBar({
             onClick={() => handleTabClick('non_food')}
           >
             <TabText>
-              Non-Food Items <TabCaret>▼</TabCaret>
+              {isMobile ? 'Non-Food' : 'Non-Food Items'} <TabCaret>▼</TabCaret>
             </TabText>
           </TabButton>
           {openDropdown === 'non_food' && (
@@ -272,8 +307,8 @@ export default function TabBar({
         <AddButton title='Add Category' onClick={onAddCategory}>
           <FiPlus size={26} color='#ffffff' />
         </AddButton>
-        <FilterAllButton onClick={onFilterAll}>
-          <span>Filter All</span> <FiFilter size={24} strokeWidth={2.2} />
+        <FilterAllButton onClick={onFilterAll} aria-label='Filter All'>
+          <FilterAllLabel>Filter All</FilterAllLabel> <FiFilter size={24} strokeWidth={2.2} />
         </FilterAllButton>
       </RightSection>
     </TabContainer>

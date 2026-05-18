@@ -21,7 +21,7 @@ const Modal = styled.div`
   background: #ffffff;
   border-radius: 10px;
   padding: 24px 28px;
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 `;
@@ -69,6 +69,11 @@ const CloseButton = styled.button`
   svg polyline {
     stroke: #ffffff;
   }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
 `;
 
 const Field = styled.div`
@@ -91,9 +96,14 @@ const Input = styled.input`
   font-size: 14px;
   outline: none;
   color: #1a2b4a;
+  box-sizing: border-box;
 
   &:focus {
     border-color: #2a4d8f;
+  }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
   }
 `;
 
@@ -106,9 +116,14 @@ const Select = styled.select`
   outline: none;
   color: #1a2b4a;
   background: #ffffff;
+  box-sizing: border-box;
 
   &:focus {
     border-color: #2a4d8f;
+  }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
   }
 `;
 
@@ -170,7 +185,7 @@ export default function AddCategoryModal({ onClose, onAdd }) {
           </Select>
         </Field>
 
-        <DoneButton onClick={handleDone}>Done</DoneButton>
+        <DoneButton onClick={handleDone}>Add</DoneButton>
       </Modal>
     </Overlay>
   );

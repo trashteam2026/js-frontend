@@ -49,6 +49,18 @@ const PickerCard = styled.div`
   width: 320px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
   z-index: 301;
+
+  @media (max-width: 767px) {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: auto;
+    border-radius: 16px 16px 0 0;
+    max-height: 80vh;
+    overflow: hidden;
+    overflow-y: auto;
+  }
 `;
 
 const RangeHeader = styled.div`
@@ -89,6 +101,11 @@ const NavArrow = styled.button`
   color: #2c5e95;
   padding: 2px 5px;
   line-height: 1;
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 `;
 
 const NavSelect = styled.select`
@@ -99,6 +116,10 @@ const NavSelect = styled.select`
   color: #2c5e95;
   cursor: pointer;
   outline: none;
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const DayHeaderRow = styled.div`
@@ -127,6 +148,10 @@ const DayCellWrapper = styled.div`
   align-items: center;
   justify-content: center;
   cursor: pointer;
+
+  @media (max-width: 767px) {
+    height: 44px;
+  }
 `;
 
 const RangeBg = styled.div`

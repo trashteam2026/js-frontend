@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiEdit2, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -25,12 +26,17 @@ const Modal = styled.div`
   background: #ffffff;
   border-radius: 10px;
   padding: 28px 32px 24px;
-  min-width: 560px;
+  width: min(440px, calc(100vw - 40px));
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (max-width: 767px) {
+    width: min(420px, calc(100vw - 48px));
+    max-width: none;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -47,6 +53,12 @@ const CloseButton = styled.button`
   padding: 4px;
   border-radius: 4px;
   &:hover { color: #1a2b4a; background-color: #f0f3f8; }
+
+  @media (max-width: 767px) {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
 `;
 
 const Title = styled.h2`
@@ -122,6 +134,10 @@ const InlineInput = styled.input`
   outline: none;
   color: #1a2b4a;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const InlineSelect = styled.select`
@@ -221,6 +237,56 @@ const CellInput = styled.input`
   color: #1a2b4a;
   font-weight: 500;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
+`;
+
+const MobileBatchList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const YearSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const YearHeader = styled.div`
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2b4a;
+  border-bottom: 1px solid #d6dce8;
+  padding-bottom: 4px;
+`;
+
+const DatedBatchRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 15px;
+  color: #1a2b4a;
+  min-height: 44px;
+  cursor: pointer;
+
+  &:hover {
+    background: #eef3fa;
+  }
+`;
+
+const BatchDateLabel = styled.span`
+  font-weight: 500;
+`;
+
+const BatchQtyDisplay = styled.span`
+  margin-left: auto;
+  font-weight: 600;
 `;
 
 const NoExpirationBatches = styled.div`
@@ -265,6 +331,10 @@ const BatchQtyInput = styled.input`
   outline: none;
   color: #1a2b4a;
   &::-webkit-inner-spin-button { opacity: 1; }
+
+  @media (max-width: 767px) {
+    font-size: 16px;
+  }
 `;
 
 const DeleteBatchButton = styled.button`
@@ -326,6 +396,11 @@ const StatusText = styled.p`
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const MONTH_NAMES_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
 export default function ItemDetailModal({
   itemId,
   categories,
@@ -333,6 +408,7 @@ export default function ItemDetailModal({
   onItemDeleted,
   onItemUpdated,
 }) {
+  const isMobile = useIsMobile();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -801,81 +877,156 @@ export default function ItemDetailModal({
               />
               Omit Zeros
             </OmitZerosLabel>
-            <HintText>Double-click a cell to edit</HintText>
+            <HintText>
+              {isMobile ? 'Tap a row to edit' : 'Double-click a cell to edit'}
+            </HintText>
           </ExpirationHeader>
 
-          <GridWrapper>
-            <Grid>
-              <thead>
-                <tr>
-                  <GridHeaderCell />
-                  {gridData.months.map((m) => (
-                    <GridHeaderCell key={m}>{m}</GridHeaderCell>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {gridData.years.map((year) => (
-                  <tr key={year}>
-                    <GridYearCell>{year}</GridYearCell>
-                    {gridData.months.map((month) => {
-                      const val = gridData.yearMap[year]?.[month] || 0;
-                      const isEditing =
-                        editingCell?.year === year &&
-                        editingCell?.month === month;
+          {isMobile ? (() => {
+            const hasAnyQty = gridData.years.some((y) =>
+              gridData.months.some((m) => (gridData.yearMap[y]?.[m] || 0) > 0)
+            );
+            if (omitZeros && !hasAnyQty) {
+              return <StatusText>No dated batches.</StatusText>;
+            }
+            return (
+              <MobileBatchList>
+                {gridData.years.map((year) => {
+                  const cells = gridData.months
+                    .map((month) => ({
+                      month,
+                      val: gridData.yearMap[year]?.[month] || 0,
+                    }))
+                    .filter(({ month, val }) =>
+                      omitZeros
+                        ? val > 0 ||
+                          (editingCell?.year === year &&
+                            editingCell?.month === month)
+                        : true
+                    );
+                  if (cells.length === 0) return null;
+                  return (
+                    <YearSection key={year}>
+                      <YearHeader>{year}</YearHeader>
+                      {cells.map(({ month, val }) => {
+                        const isEditing =
+                          editingCell?.year === year &&
+                          editingCell?.month === month;
+                        return (
+                          <DatedBatchRow
+                            key={month}
+                            onClick={() => {
+                              if (isEditing) return;
+                              setEditingCell({ year, month });
+                              setCellInput(String(val));
+                            }}
+                          >
+                            <BatchDateLabel>
+                              {MONTH_NAMES_SHORT[month - 1]} 1
+                            </BatchDateLabel>
+                            {isEditing ? (
+                              <BatchQtyInput
+                                ref={cellInputRef}
+                                type='number'
+                                min='0'
+                                style={{ marginLeft: 'auto' }}
+                                value={cellInput}
+                                onChange={(e) => setCellInput(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                onBlur={saveCellEdit}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveCellEdit();
+                                  if (e.key === 'Escape') setEditingCell(null);
+                                }}
+                              />
+                            ) : (
+                              <>
+                                <BatchQtyDisplay>{val}</BatchQtyDisplay>
+                                <FiEdit2 size={14} color='#6b7b95' />
+                              </>
+                            )}
+                          </DatedBatchRow>
+                        );
+                      })}
+                    </YearSection>
+                  );
+                })}
+              </MobileBatchList>
+            );
+          })() : (
+            <GridWrapper>
+              <Grid>
+                <thead>
+                  <tr>
+                    <GridHeaderCell />
+                    {gridData.months.map((m) => (
+                      <GridHeaderCell key={m}>{m}</GridHeaderCell>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {gridData.years.map((year) => (
+                    <tr key={year}>
+                      <GridYearCell>{year}</GridYearCell>
+                      {gridData.months.map((month) => {
+                        const val = gridData.yearMap[year]?.[month] || 0;
+                        const isEditing =
+                          editingCell?.year === year &&
+                          editingCell?.month === month;
 
-                      if (omitZeros && val === 0 && !isEditing) {
+                        if (omitZeros && val === 0 && !isEditing) {
+                          return (
+                            <GridCell
+                              key={month}
+                              $value={0}
+                              onDoubleClick={() => {
+                                setEditingCell({ year, month });
+                                setCellInput('0');
+                              }}
+                            >
+                              —
+                            </GridCell>
+                          );
+                        }
+
+                        if (isEditing) {
+                          return (
+                            <GridCell key={month} $value={val} $editing>
+                              <CellInput
+                                ref={cellInputRef}
+                                type='number'
+                                min='0'
+                                value={cellInput}
+                                onChange={(e) => setCellInput(e.target.value)}
+                                onBlur={saveCellEdit}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveCellEdit();
+                                  if (e.key === 'Escape') setEditingCell(null);
+                                }}
+                              />
+                            </GridCell>
+                          );
+                        }
+
                         return (
                           <GridCell
                             key={month}
-                            $value={0}
+                            $value={val}
                             onDoubleClick={() => {
                               setEditingCell({ year, month });
-                              setCellInput('0');
+                              setCellInput(String(val));
                             }}
                           >
-                            —
+                            {val}
                           </GridCell>
                         );
-                      }
-
-                      if (isEditing) {
-                        return (
-                          <GridCell key={month} $value={val} $editing>
-                            <CellInput
-                              ref={cellInputRef}
-                              type='number'
-                              min='0'
-                              value={cellInput}
-                              onChange={(e) => setCellInput(e.target.value)}
-                              onBlur={saveCellEdit}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveCellEdit();
-                                if (e.key === 'Escape') setEditingCell(null);
-                              }}
-                            />
-                          </GridCell>
-                        );
-                      }
-
-                      return (
-                        <GridCell
-                          key={month}
-                          $value={val}
-                          onDoubleClick={() => {
-                            setEditingCell({ year, month });
-                            setCellInput(String(val));
-                          }}
-                        >
-                          {val}
-                        </GridCell>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </Grid>
-          </GridWrapper>
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </Grid>
+            </GridWrapper>
+          )}
 
           {/* ── No-expiration batches ── */}
           {noExpBatches.length > 0 && (
@@ -899,11 +1050,23 @@ export default function ItemDetailModal({
                     />
                   ) : (
                     <BatchQtyCell
-                      title='Double-click to edit'
-                      onDoubleClick={() => {
-                        setEditingBatchId(batch.id);
-                        setBatchInput(String(batch.quantity));
-                      }}
+                      title={isMobile ? 'Tap to edit' : 'Double-click to edit'}
+                      onClick={
+                        isMobile
+                          ? () => {
+                              setEditingBatchId(batch.id);
+                              setBatchInput(String(batch.quantity));
+                            }
+                          : undefined
+                      }
+                      onDoubleClick={
+                        isMobile
+                          ? undefined
+                          : () => {
+                              setEditingBatchId(batch.id);
+                              setBatchInput(String(batch.quantity));
+                            }
+                      }
                     >
                       {batch.quantity}
                     </BatchQtyCell>
