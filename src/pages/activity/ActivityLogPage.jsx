@@ -378,17 +378,15 @@ const StatLabel = styled.span`
 `;
 
 const ChartCell = styled.div`
-  flex: 1 0 100%;
   display: flex;
   justify-content: center;
-  padding: 14px;
-  border: 1px solid #d6dce8;
-  border-radius: 10px;
-  background: #ffffff;
 
   @media (max-width: 767px) {
     grid-column: 1 / -1;
     padding: 10px 12px;
+    border: 1px solid #d6dce8;
+    border-radius: 10px;
+    background: #ffffff;
     overflow-x: auto;
   }
 `;
