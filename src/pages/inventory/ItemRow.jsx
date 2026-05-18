@@ -12,7 +12,7 @@ const Row = styled.div`
   cursor: pointer;
 
   @media (max-width: 767px) {
-    grid-template-columns: 1fr 72px;
+    grid-template-columns: 1fr 88px;
   }
 `;
 
