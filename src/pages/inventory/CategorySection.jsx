@@ -304,7 +304,14 @@ const AddItemCancel = styled.button`
   }
 `;
 
-export default function CategorySection({ category, onItemClick, onItemAdded, onEditCategory }) {
+export default function CategorySection({
+  category,
+  sortBy,
+  onSortChange,
+  onItemClick,
+  onItemAdded,
+  onEditCategory,
+}) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
@@ -312,7 +319,6 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
   const [saving, setSaving] = useState(false);
   const [kebabOpen, setKebabOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [sortMode, setSortMode] = useState('alphabetical');
   const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
   const inputRef = useRef(null);
   const kebabRef = useRef(null);
@@ -357,18 +363,6 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
     }
     setSortOpen((o) => !o);
   };
-
-  const sortedItems = (() => {
-    const items = [...category.items];
-    if (sortMode === 'alphabetical') {
-      items.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortMode === 'stock_asc') {
-      items.sort((a, b) => a.total_quantity - b.total_quantity);
-    } else if (sortMode === 'stock_desc') {
-      items.sort((a, b) => b.total_quantity - a.total_quantity);
-    }
-    return items;
-  })();
 
   const startAdding = () => {
     setAddingItem(true);
@@ -428,10 +422,10 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
                   key={opt.value}
                   type='button'
                   role='menuitemradio'
-                  aria-checked={sortMode === opt.value}
-                  $active={sortMode === opt.value}
+                  aria-checked={sortBy === opt.value}
+                  $active={sortBy === opt.value}
                   onClick={() => {
-                    setSortMode(opt.value);
+                    onSortChange?.(opt.value);
                     setSortOpen(false);
                   }}
                 >
@@ -479,10 +473,10 @@ export default function CategorySection({ category, onItemClick, onItemAdded, on
       </Header>
 
       <ItemList $isOpen={isOpen}>
-        {sortedItems.length === 0 && !addingItem ? (
+        {category.items.length === 0 && !addingItem ? (
           <EmptyMessage>No items in this category</EmptyMessage>
         ) : (
-          sortedItems.map((item, index) => (
+          category.items.map((item, index) => (
             <ItemRow
               key={item.id}
               item={item}
@@ -528,6 +522,8 @@ CategorySection.propTypes = {
     name: PropTypes.string.isRequired,
     items: PropTypes.array.isRequired,
   }).isRequired,
+  sortBy: PropTypes.string,
+  onSortChange: PropTypes.func,
   onItemClick: PropTypes.func,
   onItemAdded: PropTypes.func,
   onEditCategory: PropTypes.func,

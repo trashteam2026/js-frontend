@@ -326,7 +326,8 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState('food');
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('alphabetical');
+  const [globalSort, setGlobalSort] = useState('alphabetical');
+  const [perCategoryOverrides, setPerCategoryOverrides] = useState({});
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -414,19 +415,38 @@ export default function InventoryPage() {
     }
 
     cats = cats.map((cat) => {
+      const sortMode = perCategoryOverrides[cat.id] ?? globalSort;
       const sortedItems = [...cat.items];
-      if (sortBy === 'alphabetical') {
+      if (sortMode === 'alphabetical') {
         sortedItems.sort((a, b) => a.name.localeCompare(b.name));
-      } else if (sortBy === 'stock_asc') {
+      } else if (sortMode === 'stock_asc') {
         sortedItems.sort((a, b) => a.total_quantity - b.total_quantity);
-      } else if (sortBy === 'stock_desc') {
+      } else if (sortMode === 'stock_desc') {
         sortedItems.sort((a, b) => b.total_quantity - a.total_quantity);
+      } else if (sortMode === 'expiration') {
+        sortedItems.sort((a, b) => {
+          const aExp = a.earliest_expiration;
+          const bExp = b.earliest_expiration;
+          if (aExp == null && bExp == null) return 0;
+          if (aExp == null) return 1;
+          if (bExp == null) return -1;
+          if (aExp < bExp) return -1;
+          if (aExp > bExp) return 1;
+          return 0;
+        });
       }
       return { ...cat, items: sortedItems };
     });
 
     return cats;
-  }, [categoriesWithItems, activeTab, selectedCategoryId, searchQuery, sortBy]);
+  }, [
+    categoriesWithItems,
+    activeTab,
+    selectedCategoryId,
+    searchQuery,
+    globalSort,
+    perCategoryOverrides,
+  ]);
 
   const handleItemClick = (item) => {
     setSelectedItemId(item.id);
@@ -593,6 +613,13 @@ export default function InventoryPage() {
             <CategorySection
               key={category.id}
               category={category}
+              sortBy={perCategoryOverrides[category.id] ?? globalSort}
+              onSortChange={(value) =>
+                setPerCategoryOverrides((prev) => ({
+                  ...prev,
+                  [category.id]: value,
+                }))
+              }
               onItemClick={handleItemClick}
               onItemAdded={handleItemAdded}
               onEditCategory={setCategoryToEdit}
@@ -603,8 +630,11 @@ export default function InventoryPage() {
 
       {showSortMenu && (
         <SortMenu
-          activeSort={sortBy}
-          onSortChange={setSortBy}
+          activeSort={globalSort}
+          onSortChange={(value) => {
+            setGlobalSort(value);
+            setPerCategoryOverrides({});
+          }}
           onClose={() => setShowSortMenu(false)}
           topOffset={105}
         />
