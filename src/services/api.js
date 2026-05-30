@@ -83,6 +83,8 @@ export const activityApi = {
     const qs = params.toString();
     return request('GET', `/activity${qs ? `?${qs}` : ''}`);
   },
+  updateLog: (id, quantity) => authedRequest('PATCH', `/activity/${id}`, { quantity }),
+  deleteLog: (id) => authedRequest('DELETE', `/activity/${id}`),
 };
 
 export const checkoutApi = {
@@ -92,4 +94,23 @@ export const checkoutApi = {
       itemId,
       quantity,
     }),
+};
+
+export const volunteerApi = {
+  // Owner session management
+  getSession: () => authedRequest('GET', '/api/volunteer/session'),
+  generateSession: () => authedRequest('POST', '/api/volunteer/session'),
+  endSession: () => authedRequest('DELETE', '/api/volunteer/session'),
+
+  // Public code verification
+  verifyCode: (code) => request('POST', '/api/volunteer/verify', { code }),
+
+  // Volunteer self-registration + profile
+  register: ({ name, code }) =>
+    authedRequest('POST', '/api/volunteer/register', { name, code }),
+  getMyProfile: () => authedRequest('GET', '/api/volunteer/me'),
+
+  // Owner volunteer management
+  getActiveVolunteers: () => authedRequest('GET', '/api/volunteer/volunteers'),
+  getVolunteerStats: () => authedRequest('GET', '/api/volunteer/stats'),
 };

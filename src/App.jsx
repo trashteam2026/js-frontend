@@ -4,6 +4,7 @@ import {
   MobileOnlyRoute,
   OwnerOnlyRoute,
   PublicOnlyRoute,
+  VolunteerOnlyRoute,
 } from '@/common/components/routes/ProtectedRoutes';
 import { UserProvider } from '@/common/contexts/UserContext';
 import AuthCallback from '@/pages/account/AuthCallback';
@@ -13,6 +14,7 @@ import ResetPassword from '@/pages/account/ResetPassword';
 import SignUp from '@/pages/account/SignUp';
 import ActivityLogPage from '@/pages/activity/ActivityLogPage';
 import InventoryPage from '@/pages/inventory/InventoryPage';
+import VolunteersPage from '@/pages/volunteers/VolunteersPage';
 import LandingPage from '@/pages/landing/LandingPage';
 import NotFound from '@/pages/not-found/NotFound';
 import ScanInPage from '@/pages/scan-in/ScanInPage';
@@ -28,21 +30,21 @@ export default function App() {
         <Routes>
           <Route path='/' element={<LandingPage />} />
 
-          <Route element={<MobileOnlyRoute />}>
-            <Route element={<PublicOnlyRoute />}>
-              <Route
-                path='volunteer/entry'
-                element={<VolunteerEntryPage />}
-              />
-            </Route>
+          {/* Volunteer entry: public-only (no mobile restriction — any device can enter a code) */}
+          <Route element={<PublicOnlyRoute />}>
+            <Route path='volunteer/entry' element={<VolunteerEntryPage />} />
           </Route>
 
-          <Route path='scan-in' element={<ScanInPage />} />
+          {/* Scan-in: volunteer-only guard so owners/guests can't access it directly */}
+          <Route element={<VolunteerOnlyRoute />}>
+            <Route path='scan-in' element={<ScanInPage />} />
+          </Route>
 
           <Route element={<OwnerOnlyRoute />}>
             <Route path='inventory' element={<InventoryPage />} />
             <Route path='activity' element={<ActivityLogPage />} />
             <Route path='scan-out' element={<ScanOutPage />} />
+            <Route path='volunteers' element={<VolunteersPage />} />
           </Route>
 
           <Route element={<PublicOnlyRoute />}>

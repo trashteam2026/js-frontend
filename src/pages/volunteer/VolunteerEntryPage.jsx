@@ -7,6 +7,7 @@ import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
 import { auth } from '@/firebase-config';
 import { signInAnonymously } from 'firebase/auth';
+import { volunteerApi } from '@/services/api';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -92,25 +93,29 @@ const Label = styled.label`
   font-size: 1rem;
   font-weight: 600;
   color: #1a2b4a;
-  align-self: center;
+  align-self: flex-start;
 `;
 
-const CodeInput = styled.input`
-  font-size: 1.1rem;
+const TextInput = styled.input`
+  font-size: 1rem;
   padding: 10px 12px;
   border: 1px solid #c7d2e3;
   border-radius: 6px;
   width: 100%;
   box-sizing: border-box;
-  letter-spacing: 3px;
-  text-align: center;
-  text-transform: uppercase;
   color: #1a2b4a;
   outline: none;
 
   &:focus {
     border-color: #2a4d8f;
   }
+`;
+
+const CodeInput = styled(TextInput)`
+  font-size: 1.1rem;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
 `;
 
 const NextButton = styled.button`
@@ -137,6 +142,7 @@ const NextButton = styled.button`
 export default function VolunteerEntryPage() {
   const navigate = useNavigate();
   const { role, isLoading } = useUser();
+  const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -156,16 +162,47 @@ export default function VolunteerEntryPage() {
     e.preventDefault();
     setError('');
 
-    if (!code.trim()) return;
+    if (!name.trim() || !code.trim()) return;
 
-    // TODO: restore verifyCode() once backend is ready
     setIsSubmitting(true);
     try {
-      await signInAnonymously(auth);
+      const result = await volunteerApi.verifyCode(code.trim());
+      if (!result.valid) {
+        setError('Invalid or expired code. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const credential = await signInAnonymously(auth);
+
+      // Register the volunteer's name with the backend. Best-effort — if this
+      // fails, the volunteer can still scan, they just won't appear in the
+      // owner's volunteer list.
+      try {
+        const idToken = await credential.user.getIdToken();
+        await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/volunteer/register`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ name: name.trim(), code: code.trim() }),
+          }
+        );
+      } catch {
+        // non-fatal
+      }
+
       // Navigation handled by the role-watching useEffect above.
     } catch (err) {
-      console.error('Anonymous sign-in error:', err);
-      setError('Unable to complete sign-in. Please try again.');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('expired')) {
+        setError('Invalid or expired code. Please try again.');
+      } else {
+        setError('Unable to complete sign-in. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -188,8 +225,24 @@ export default function VolunteerEntryPage() {
       <Divider />
 
       <Form onSubmit={handleSubmit}>
-        <Label htmlFor='volunteer-code'>Enter Code</Label>
         {error && <RedSpan>{error}</RedSpan>}
+
+        <Label htmlFor='volunteer-name'>Your Name</Label>
+        <TextInput
+          id='volunteer-name'
+          type='text'
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setError('');
+          }}
+          autoComplete='name'
+          placeholder='First and last name'
+          maxLength={60}
+          required
+        />
+
+        <Label htmlFor='volunteer-code'>Session Code</Label>
         <CodeInput
           id='volunteer-code'
           type='text'
@@ -204,8 +257,12 @@ export default function VolunteerEntryPage() {
           maxLength={8}
           required
         />
-        <NextButton type='submit' disabled={isSubmitting || !code.trim()}>
-          {isSubmitting ? 'Signing in...' : 'Next'}
+
+        <NextButton
+          type='submit'
+          disabled={isSubmitting || !name.trim() || !code.trim()}
+        >
+          {isSubmitting ? 'Signing in...' : 'Check In'}
         </NextButton>
       </Form>
     </PageWrapper>

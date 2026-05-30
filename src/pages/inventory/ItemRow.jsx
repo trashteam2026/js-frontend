@@ -10,6 +10,11 @@ const Row = styled.div`
   background-color: ${({ $index }) =>
     $index % 2 === 0 ? '#f1f1f3' : '#d3deec'};
   cursor: pointer;
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background-color: #b8cfe8;
+  }
 
   @media (max-width: 767px) {
     grid-template-columns: 1fr 88px;

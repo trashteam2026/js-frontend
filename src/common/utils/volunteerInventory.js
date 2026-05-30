@@ -65,6 +65,8 @@ export async function addItem({
   quantity,
   barcode,
   categories = [],
+  volunteerName = null,
+  volunteerToken = null,
 }) {
   const normalizedCategory = normalizeCategoryName(category);
   const matchedCategory = categories.find(
@@ -76,21 +78,28 @@ export async function addItem({
     expirationDate: toExpirationDate(expirationMonth, expirationYear),
     quantity,
     barcode: barcode || null,
+    volunteerName: volunteerName || null,
   };
 
   if (matchedCategory?.id) {
     payload.categoryId = matchedCategory.id;
   }
 
+  const headers = { 'Content-Type': 'application/json' };
+  if (volunteerToken) headers['Authorization'] = `Bearer ${volunteerToken}`;
+
   const response = await fetch(buildUrl('/api/inventory/check-in'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.error || 'Failed to save item');
+    const err = new Error(data?.error || 'Failed to save item');
+    err.status = response.status;
+    err.code = data?.code;
+    throw err;
   }
 
   const saved = await response.json();

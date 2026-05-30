@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCalendar, FiSearch, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiKey, FiSearch, FiUser, FiUsers } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
@@ -11,6 +11,7 @@ import styled from 'styled-components';
 
 import { activityApi } from '../../services/api';
 import ProfileDropdown from '../inventory/ProfileDropdown';
+import VolunteerCodeModal from '../inventory/VolunteerCodeModal';
 import DateRangePicker from './DateRangePicker';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -649,6 +650,7 @@ export default function ActivityLogPage() {
   const profileWrapperRef = useRef(null);
   const isMobile = useIsMobile();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState(defaultDateRange);
@@ -741,6 +743,18 @@ export default function ActivityLogPage() {
           <DesktopOnlyActiveNavIcon title="Activity">
             <HistoryIcon />
           </DesktopOnlyActiveNavIcon>
+          <NavIcon
+            title="Volunteers"
+            onClick={() => navigate('/volunteers')}
+          >
+            <FiUsers size={22} />
+          </NavIcon>
+          <NavIcon
+            title="Volunteer Session"
+            onClick={() => setShowVolunteerModal(true)}
+          >
+            <FiKey size={22} />
+          </NavIcon>
           <ProfileWrapper ref={profileWrapperRef}>
             <ProfileButton
               title="Profile"
@@ -840,6 +854,10 @@ export default function ActivityLogPage() {
         >
           <CashRegisterIcon />
         </Fab>
+      )}
+
+      {showVolunteerModal && (
+        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
       )}
     </PageWrapper>
   );

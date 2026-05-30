@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiEdit2, FiList, FiTrash2, FiUser, FiX } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { useUser } from '@/common/contexts/UserContext';
@@ -8,6 +8,8 @@ import {
   fetchCategories,
   lookupByBarcode,
 } from '@/common/utils/volunteerInventory';
+import { auth } from '@/firebase-config';
+import { activityApi, volunteerApi } from '@/services/api';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import styled from 'styled-components';
 
@@ -206,6 +208,272 @@ const ConfirmHint = styled.span`
   margin-top: 4px;
 `;
 
+const VolunteerBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f0f4fa;
+  border-radius: 9999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a2b4a;
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  svg {
+    flex-shrink: 0;
+    color: #2a4d8f;
+  }
+`;
+
+const ItemsCount = styled.span`
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-weight: 400;
+`;
+
+const HistoryButton = styled.button`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f4fa;
+  border: none;
+  border-radius: 9999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a2b4a;
+  cursor: pointer;
+  max-width: 180px;
+
+  svg {
+    flex-shrink: 0;
+    color: #2a4d8f;
+  }
+
+  &:hover {
+    background: #dbe6f5;
+  }
+`;
+
+const HistoryPanel = styled.div`
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 56px;
+`;
+
+const HistoryHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+`;
+
+const HistoryTitle = styled.h2`
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2b4a;
+`;
+
+const CloseButton = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    color: #1a2b4a;
+  }
+`;
+
+const HistoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 180px);
+  padding-bottom: 16px;
+`;
+
+const HistoryItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+`;
+
+const HistoryIndex = styled.div`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2a4d8f;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+`;
+
+const HistoryInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const HistoryName = styled.div`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a2b4a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const HistoryMeta = styled.div`
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+`;
+
+const HistoryQty = styled.div`
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a2b4a;
+  background: #e0eaf7;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+`;
+
+const SessionEndedOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, 0.7);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 24px;
+`;
+
+const SessionEndedCard = styled.div`
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 32px 28px;
+  max-width: 300px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+`;
+
+const SessionEndedTitle = styled.h2`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a2b4a;
+`;
+
+const SessionEndedBody = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.4;
+`;
+
+const SessionEndedButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: #2a4d8f;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1e3a6e;
+  }
+`;
+
+const EmptyHistory = styled.p`
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: 32px 0;
+`;
+
+const HistoryActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+`;
+
+const ActionBtn = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border-radius: 4px;
+
+  &:hover {
+    color: #1a2b4a;
+    background: #e9eef5;
+  }
+`;
+
+const DeleteBtn = styled(ActionBtn)`
+  &:hover {
+    color: #dc2626;
+    background: #fee2e2;
+  }
+`;
+
+const QtyEditInput = styled.input`
+  width: 54px;
+  border: 1.5px solid #2a4d8f;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1a2b4a;
+  text-align: center;
+  outline: none;
+  background: #fff;
+`;
+
+const EditError = styled.p`
+  font-size: 0.72rem;
+  color: #dc2626;
+  margin: 4px 0 0;
+  text-align: center;
+`;
+
 export default function ScanInPage() {
   const { logout } = useUser();
   const videoRef = useRef(null);
@@ -220,6 +488,14 @@ export default function ScanInPage() {
   const [categories, setCategories] = useState([]);
   const [cameraStatus, setCameraStatus] = useState('starting');
   const [cameraError, setCameraError] = useState('');
+  const [volunteerName, setVolunteerName] = useState('');
+  const [itemsScanned, setItemsScanned] = useState(0);
+  const [sessionItems, setSessionItems] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editQty, setEditQty] = useState('');
+  const [editError, setEditError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -227,19 +503,47 @@ export default function ScanInPage() {
     const loadCategories = async () => {
       try {
         const result = await fetchCategories();
-        if (!cancelled) {
-          setCategories(result);
-        }
+        if (!cancelled) setCategories(result);
       } catch (err) {
         console.error('Category load error:', err);
       }
     };
 
+    const loadProfile = async () => {
+      try {
+        const profile = await volunteerApi.getMyProfile();
+        if (!cancelled) {
+          setVolunteerName(profile.name || '');
+          setItemsScanned(profile.itemsScanned || 0);
+        }
+      } catch (err) {
+        if (!cancelled && (err.code === 'SESSION_ENDED' || err.status === 403)) {
+          setSessionEnded(true);
+        }
+        // otherwise non-fatal
+      }
+    };
+
     loadCategories();
+    loadProfile();
 
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Poll every 60 s so idle volunteers are evicted promptly when session ends.
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await volunteerApi.getMyProfile();
+      } catch (err) {
+        if (err.code === 'SESSION_ENDED' || err.status === 403) {
+          setSessionEnded(true);
+        }
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -387,12 +691,85 @@ export default function ScanInPage() {
 
   const handleFormSubmit = async (data) => {
     try {
-      await addItem({ ...data, categories });
+      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      const result = await addItem({
+        ...data,
+        categories,
+        volunteerName: volunteerName || null,
+        volunteerToken: token,
+      });
+      setItemsScanned((n) => n + 1);
+      setSessionItems((prev) => [
+        {
+          name: data.name,
+          quantity: data.quantity,
+          timestamp: new Date(),
+          activityLogId: result?.activityLogId ?? null,
+          batchId: result?.batch?.id ?? null,
+        },
+        ...prev,
+      ]);
       setConfirmation({ count: data.quantity, name: data.name });
       setView('confirmation');
     } catch (err) {
+      if (err.code === 'SESSION_ENDED' || err.status === 403) {
+        setSessionEnded(true);
+        return;
+      }
       console.error('Save item error:', err);
       throw err;
+    }
+  };
+
+  const handleEditStart = (index) => {
+    setEditingIndex(index);
+    setEditQty(String(sessionItems[index].quantity));
+    setEditError('');
+  };
+
+  const handleEditCancel = () => {
+    setEditingIndex(null);
+    setEditQty('');
+    setEditError('');
+  };
+
+  const handleEditSave = async (index) => {
+    const newQty = parseInt(editQty, 10);
+    if (!Number.isInteger(newQty) || newQty <= 0) {
+      setEditError('Enter a valid quantity');
+      return;
+    }
+    const item = sessionItems[index];
+    if (!item.activityLogId) {
+      setEditError('Cannot edit — no log reference');
+      return;
+    }
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      await activityApi.updateLog(item.activityLogId, newQty);
+      setSessionItems((prev) =>
+        prev.map((s, i) => (i === index ? { ...s, quantity: newQty } : s))
+      );
+      setEditingIndex(null);
+      setEditQty('');
+    } catch (err) {
+      setEditError(err.message || 'Failed to save');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async (index) => {
+    const item = sessionItems[index];
+    if (!item.activityLogId) return;
+    try {
+      await activityApi.deleteLog(item.activityLogId);
+      setSessionItems((prev) => prev.filter((_, i) => i !== index));
+      setItemsScanned((n) => Math.max(0, n - 1));
+      if (editingIndex === index) setEditingIndex(null);
+    } catch (err) {
+      console.error('Delete log error:', err);
     }
   };
 
@@ -403,7 +780,7 @@ export default function ScanInPage() {
     setView('camera');
   };
 
-  const showHeader = view !== 'form';
+  const showHeader = view !== 'form' && view !== 'history';
 
   return (
     <PageWrapper>
@@ -415,6 +792,20 @@ export default function ScanInPage() {
         >
           <FiArrowLeft size={20} />
         </BackButton>
+      )}
+
+      {view !== 'form' && view !== 'history' && volunteerName && (
+        <HistoryButton
+          type='button'
+          onClick={() => setView('history')}
+          aria-label='View scanned items'
+        >
+          <FiList size={13} />
+          {volunteerName}
+          {itemsScanned > 0 && (
+            <ItemsCount>&nbsp;· {itemsScanned}</ItemsCount>
+          )}
+        </HistoryButton>
       )}
 
       {showHeader && (
@@ -462,6 +853,102 @@ export default function ScanInPage() {
         />
       )}
 
+      {view === 'history' && (
+        <HistoryPanel>
+          <HistoryHeader>
+            <HistoryTitle>
+              <FiList size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              This Session
+            </HistoryTitle>
+            <CloseButton
+              type='button'
+              onClick={goBackToScanner}
+              aria-label='Close history'
+            >
+              <FiX size={20} />
+            </CloseButton>
+          </HistoryHeader>
+
+          {sessionItems.length === 0 ? (
+            <EmptyHistory>No items scanned yet.</EmptyHistory>
+          ) : (
+            <HistoryList>
+              {sessionItems.map((item, i) => (
+                <HistoryItem key={i}>
+                  <HistoryIndex>{sessionItems.length - i}</HistoryIndex>
+                  <HistoryInfo>
+                    <HistoryName>{item.name}</HistoryName>
+                    <HistoryMeta>
+                      {item.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </HistoryMeta>
+                    {editingIndex === i && editError && (
+                      <EditError>{editError}</EditError>
+                    )}
+                  </HistoryInfo>
+                  {editingIndex === i ? (
+                    <HistoryActions>
+                      <QtyEditInput
+                        type='number'
+                        min='1'
+                        value={editQty}
+                        onChange={(e) => setEditQty(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(i);
+                          if (e.key === 'Escape') handleEditCancel();
+                        }}
+                        autoFocus
+                        disabled={savingEdit}
+                      />
+                      <ActionBtn
+                        type='button'
+                        aria-label='Save'
+                        onClick={() => handleEditSave(i)}
+                        disabled={savingEdit}
+                      >
+                        <FiCheck size={15} />
+                      </ActionBtn>
+                      <ActionBtn
+                        type='button'
+                        aria-label='Cancel'
+                        onClick={handleEditCancel}
+                        disabled={savingEdit}
+                      >
+                        <FiX size={15} />
+                      </ActionBtn>
+                    </HistoryActions>
+                  ) : (
+                    <HistoryActions>
+                      <HistoryQty>×{item.quantity}</HistoryQty>
+                      {item.activityLogId && (
+                        <>
+                          <ActionBtn
+                            type='button'
+                            aria-label='Edit quantity'
+                            onClick={() => handleEditStart(i)}
+                          >
+                            <FiEdit2 size={13} />
+                          </ActionBtn>
+                          <DeleteBtn
+                            type='button'
+                            aria-label='Delete entry'
+                            onClick={() => handleDelete(i)}
+                          >
+                            <FiTrash2 size={13} />
+                          </DeleteBtn>
+                        </>
+                      )}
+                    </HistoryActions>
+                  )}
+                </HistoryItem>
+              ))}
+            </HistoryList>
+          )}
+        </HistoryPanel>
+      )}
+
       {view === 'confirmation' && confirmation && (
         <SectionWrapper>
           <ConfirmCard
@@ -476,6 +963,20 @@ export default function ScanInPage() {
             <ConfirmHint>Tap to scan another</ConfirmHint>
           </ConfirmCard>
         </SectionWrapper>
+      )}
+
+      {sessionEnded && (
+        <SessionEndedOverlay>
+          <SessionEndedCard>
+            <SessionEndedTitle>Session Ended</SessionEndedTitle>
+            <SessionEndedBody>
+              The volunteer session has ended. Thank you for your help today!
+            </SessionEndedBody>
+            <SessionEndedButton type='button' onClick={handleBack}>
+              Sign Out
+            </SessionEndedButton>
+          </SessionEndedCard>
+        </SessionEndedOverlay>
       )}
     </PageWrapper>
   );
