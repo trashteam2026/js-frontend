@@ -1,0 +1,261 @@
+import { useEffect, useState } from 'react';
+import { FiCheck, FiCopy, FiX } from 'react-icons/fi';
+import PropTypes from 'prop-types';
+import styled from 'styled-components';
+
+import { volunteerApi } from '../../services/api';
+
+const Backdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 16px;
+`;
+
+const Modal = styled.div`
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+`;
+
+const Title = styled.h2`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a2b4a;
+  padding-right: 28px;
+`;
+
+const StatusText = styled.p`
+  margin: 0;
+  font-size: 0.88rem;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.4;
+`;
+
+const CodeBox = styled.div`
+  background: #f0f4fa;
+  border-radius: 8px;
+  padding: 18px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+`;
+
+const CodeText = styled.span`
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #1a2b4a;
+  font-family: monospace;
+`;
+
+const CopyButton = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #2c5e95;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #e0eaf7;
+  }
+`;
+
+const PrimaryButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: #2c5e95;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #1e3a6e;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const SecondaryButton = styled(PrimaryButton)`
+  background: transparent;
+  color: #2c5e95;
+  border: 1px solid #2c5e95;
+
+  &:hover:not(:disabled) {
+    background: #f0f4fa;
+  }
+`;
+
+const DangerButton = styled(PrimaryButton)`
+  background: #dc2626;
+
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+`;
+
+const ErrorText = styled.p`
+  margin: 0;
+  font-size: 0.85rem;
+  color: #dc2626;
+  text-align: center;
+`;
+
+export default function VolunteerCodeModal({ onClose }) {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    volunteerApi
+      .getSession()
+      .then(setSession)
+      .catch(() => setError('Failed to load session.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleGenerate = async () => {
+    setActionLoading(true);
+    setError('');
+    try {
+      const result = await volunteerApi.generateSession();
+      setSession(result);
+    } catch {
+      setError('Failed to generate code.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEnd = async () => {
+    setActionLoading(true);
+    setError('');
+    try {
+      await volunteerApi.endSession();
+      setSession({ active: false, code: null });
+    } catch {
+      setError('Failed to end session.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!session?.code) return;
+    try {
+      await navigator.clipboard.writeText(session.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable — silently ignore
+    }
+  };
+
+  return (
+    <Backdrop onClick={onClose}>
+      <Modal onClick={(e) => e.stopPropagation()}>
+        <CloseButton onClick={onClose} aria-label='Close'>
+          <FiX size={20} />
+        </CloseButton>
+        <Title>Volunteer Session</Title>
+
+        {loading && <StatusText>Loading…</StatusText>}
+
+        {!loading && error && <ErrorText>{error}</ErrorText>}
+
+        {!loading && !session?.active && (
+          <>
+            <StatusText>
+              Generate a one-time code to give volunteers access to the
+              check-in scanner.
+            </StatusText>
+            <PrimaryButton onClick={handleGenerate} disabled={actionLoading}>
+              {actionLoading ? 'Generating…' : 'Generate Code'}
+            </PrimaryButton>
+          </>
+        )}
+
+        {!loading && session?.active && (
+          <>
+            <StatusText>
+              Share this code with volunteers.
+              {session.expiresAt && (
+                <> Expires at{' '}
+                  <strong>
+                    {new Date(session.expiresAt).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </strong>.
+                </>
+              )}
+            </StatusText>
+            <CodeBox>
+              <CodeText>{session.code}</CodeText>
+              <CopyButton onClick={handleCopy} title='Copy code'>
+                {copied ? (
+                  <FiCheck size={18} color='#16a34a' />
+                ) : (
+                  <FiCopy size={18} />
+                )}
+              </CopyButton>
+            </CodeBox>
+            {error && <ErrorText>{error}</ErrorText>}
+            <SecondaryButton onClick={handleGenerate} disabled={actionLoading}>
+              {actionLoading ? 'Generating…' : 'Generate New Code'}
+            </SecondaryButton>
+            <DangerButton onClick={handleEnd} disabled={actionLoading}>
+              End Session
+            </DangerButton>
+          </>
+        )}
+      </Modal>
+    </Backdrop>
+  );
+}
+
+VolunteerCodeModal.propTypes = {
+  onClose: PropTypes.func.isRequired,
+};

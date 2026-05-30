@@ -32,6 +32,14 @@ export function AuthenticatedRoute() {
   return <Outlet />;
 }
 
+export function VolunteerOnlyRoute() {
+  const { role, isLoading } = useUser();
+
+  if (isLoading) return null;
+  if (role !== 'volunteer') return <Navigate to='/volunteer/entry' replace />;
+  return <Outlet />;
+}
+
 export function MobileOnlyRoute() {
   const isMobile = useIsMobile();
 

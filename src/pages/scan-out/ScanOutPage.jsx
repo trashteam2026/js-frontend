@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser } from 'react-icons/fi';
+import { FiKey, FiUser, FiUsers } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
@@ -12,6 +12,7 @@ import styled from 'styled-components';
 
 import { checkoutApi, itemsApi } from '../../services/api';
 import ProfileDropdown from '../inventory/ProfileDropdown';
+import VolunteerCodeModal from '../inventory/VolunteerCodeModal';
 import CartLine from './CartLine';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -462,6 +463,7 @@ export default function ScanOutPage() {
   const [cameraError, setCameraError] = useState('');
 
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const profileWrapperRef = useRef(null);
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
@@ -900,6 +902,18 @@ export default function ScanOutPage() {
           <NavIcon title='Activity' onClick={() => navigate('/activity')}>
             <HistoryIcon />
           </NavIcon>
+          <NavIcon
+            title='Volunteers'
+            onClick={() => navigate('/volunteers')}
+          >
+            <FiUsers size={22} />
+          </NavIcon>
+          <NavIcon
+            title='Volunteer Session'
+            onClick={() => setShowVolunteerModal(true)}
+          >
+            <FiKey size={22} />
+          </NavIcon>
           <ProfileWrapper ref={profileWrapperRef}>
             <ProfileButton
               title='Profile'
@@ -1015,6 +1029,10 @@ export default function ScanOutPage() {
           )}
         </Panel>
       </Content>
+
+      {showVolunteerModal && (
+        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
+      )}
     </PageWrapper>
   );
 }

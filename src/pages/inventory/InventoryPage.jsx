@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiSearch, FiUser } from 'react-icons/fi';
+import { FiKey, FiPlus, FiSearch, FiUser, FiUsers } from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
 import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
@@ -18,6 +18,7 @@ import ItemDetailModal from './ItemDetailModal';
 import ProfileDropdown from './ProfileDropdown';
 import SortMenu from './SortMenu';
 import TabBar from './TabBar';
+import VolunteerCodeModal from './VolunteerCodeModal';
 
 const PageWrapper = styled.div`
   height: 100vh;
@@ -334,6 +335,7 @@ export default function InventoryPage() {
   const [categoryToEdit, setCategoryToEdit] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const profileWrapperRef = useRef(null);
 
   useEffect(() => {
@@ -576,6 +578,18 @@ export default function InventoryPage() {
           <NavIcon title='Activity' onClick={() => navigate('/activity')}>
             <HistoryIcon style={{ color: '#4e4b57' }} />
           </NavIcon>
+          <NavIcon
+            title='Volunteers'
+            onClick={() => navigate('/volunteers')}
+          >
+            <FiUsers size={22} />
+          </NavIcon>
+          <NavIcon
+            title='Volunteer Session'
+            onClick={() => setShowVolunteerModal(true)}
+          >
+            <FiKey size={22} />
+          </NavIcon>
           <ProfileWrapper ref={profileWrapperRef}>
             <ProfileButton
               title='Profile'
@@ -695,6 +709,10 @@ export default function InventoryPage() {
         >
           <CashRegisterIcon />
         </Fab>
+      )}
+
+      {showVolunteerModal && (
+        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
       )}
     </PageWrapper>
   );

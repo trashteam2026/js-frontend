@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { useUser } from '@/common/contexts/UserContext';
-import useIsMobile from '@/common/hooks/useIsMobile';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -73,7 +72,6 @@ const SecondaryButton = styled.button`
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { role, isLoading } = useUser();
 
   useEffect(() => {
@@ -95,14 +93,12 @@ export default function LandingPage() {
         <NavyButton type='button' onClick={() => navigate('/login')}>
           Pantry Owner Login
         </NavyButton>
-        {isMobile && (
-          <SecondaryButton
-            type='button'
-            onClick={() => navigate('/volunteer/entry')}
-          >
-            Volunteer Access
-          </SecondaryButton>
-        )}
+        <SecondaryButton
+          type='button'
+          onClick={() => navigate('/volunteer/entry')}
+        >
+          Volunteer Access
+        </SecondaryButton>
       </ButtonStack>
     </PageWrapper>
   );
