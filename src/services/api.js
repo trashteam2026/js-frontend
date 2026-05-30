@@ -96,6 +96,14 @@ export const checkoutApi = {
     }),
 };
 
+export const barcodeApi = {
+  generate: ({ name, categoryId }) =>
+    authedRequest('POST', '/api/barcode/generate', {
+      name,
+      categoryId,
+    }),
+};
+
 export const volunteerApi = {
   // Owner session management
   getSession: () => authedRequest('GET', '/api/volunteer/session'),

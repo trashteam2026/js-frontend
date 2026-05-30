@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiCheck, FiEdit2, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiCheck, FiEdit2, FiPlus, FiPrinter, FiTrash2, FiX } from 'react-icons/fi';
 
+import PrintQuantityModal from '@/common/components/PrintQuantityModal';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
 import { batchesApi, itemsApi } from '../../services/api';
+import { openBarcodePrintWindow } from '../../utils/barcodePrint';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -387,6 +389,39 @@ const DeleteItemButton = styled.button`
   &:hover { background: #fdf2f2; border-color: #c0392b; }
 `;
 
+const PrintButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c5e95;
+  background: #ffffff;
+  border: 1px solid #9bb6d8;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  margin-top: 4px;
+
+  &:hover {
+    background: #eef3fa;
+    border-color: #2c5e95;
+  }
+
+  &:disabled {
+    color: #9ca3af;
+    border-color: #d1d5db;
+    cursor: not-allowed;
+  }
+`;
+
+const FooterActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
 const StatusText = styled.p`
   font-size: 14px;
   color: #8a97ad;
@@ -413,6 +448,7 @@ export default function ItemDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
 
   const [omitZeros, setOmitZeros] = useState(false);
 
@@ -691,6 +727,18 @@ export default function ItemDetailModal({
       console.error('Delete item error:', err);
     }
   }, [detail, itemId, onItemDeleted, onClose]);
+
+  const handlePrintBarcodes = useCallback((copies) => {
+    if (!detail?.barcodes?.length) return;
+
+    openBarcodePrintWindow({
+      itemName: detail.name,
+      categoryName: detail.category_name,
+      barcodes: detail.barcodes,
+      copies,
+    });
+    setShowPrintOptions(false);
+  }, [detail]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -1094,10 +1142,31 @@ export default function ItemDetailModal({
 
         <Divider />
 
-        <DeleteItemButton onClick={handleDeleteItem} disabled={saving}>
-          <FiTrash2 size={14} />
-          Delete Item
-        </DeleteItemButton>
+        <FooterActions>
+          <PrintButton
+            type='button'
+            onClick={() => setShowPrintOptions(true)}
+            disabled={saving || !detail.barcodes?.length}
+            title={
+              detail.barcodes?.length
+                ? 'Print barcode labels'
+                : 'No barcodes are mapped to this item'
+            }
+          >
+            <FiPrinter size={14} />
+            Print Barcodes
+          </PrintButton>
+          <DeleteItemButton onClick={handleDeleteItem} disabled={saving}>
+            <FiTrash2 size={14} />
+            Delete Item
+          </DeleteItemButton>
+        </FooterActions>
+        {showPrintOptions && (
+          <PrintQuantityModal
+            onClose={() => setShowPrintOptions(false)}
+            onPrint={handlePrintBarcodes}
+          />
+        )}
       </Modal>
     </Overlay>
   );

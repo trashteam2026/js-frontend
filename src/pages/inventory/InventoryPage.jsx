@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { FaBarcode } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { FiKey, FiPlus, FiSearch, FiUser, FiUsers } from 'react-icons/fi';
 
@@ -28,7 +29,8 @@ const PageWrapper = styled.div`
 `;
 
 const TopBar = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 455px) minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   padding: 8px 24px;
@@ -36,10 +38,25 @@ const TopBar = styled.div`
   flex-shrink: 0;
   position: relative;
 
+  @media (max-width: 1023px) {
+    grid-template-columns: auto minmax(220px, 1fr) auto;
+  }
+
   @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     padding: 8px 12px;
-    flex-wrap: wrap;
+  }
+`;
+
+const BrandGroup = styled.div`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  @media (max-width: 767px) {
+    gap: 8px;
   }
 `;
 
@@ -82,24 +99,13 @@ const MobileBrandTitle = styled.h1`
 `;
 
 const SearchWrapper = styled.div`
-  flex: 0 1 455px;
   display: flex;
-  margin-left: 2px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 455px;
+  min-width: 0;
+  width: 100%;
 
   @media (max-width: 767px) {
-    flex: 0 0 100%;
-    order: 99;
-    min-width: 0;
-    margin-left: 0;
-    position: static;
-    top: auto;
-    transform: none;
-    width: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 `;
 
@@ -158,19 +164,20 @@ const SearchButton = styled.button`
 const NavIcons = styled.div`
   display: flex;
   align-items: center;
-  gap: 18px;
-  margin-left: auto;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
 
   @media (max-width: 767px) {
-    gap: 10px;
+    gap: 4px;
   }
 `;
 
 const NavIcon = styled.button`
   background: transparent;
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -196,8 +203,8 @@ const NavIcon = styled.button`
   }
 
   @media (max-width: 767px) {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
   }
 `;
 
@@ -220,12 +227,6 @@ const ActiveNavIcon = styled(NavIcon)`
 `;
 
 const DesktopOnlyNavIcon = styled(NavIcon)`
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-const DesktopOnlyActiveNavIcon = styled(ActiveNavIcon)`
   @media (max-width: 767px) {
     display: none;
   }
@@ -276,8 +277,8 @@ const AddFab = styled(Fab)`
 `;
 
 const ProfileButton = styled.button`
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border: none;
   border-radius: 9999px;
   background-color: #2c5e95;
@@ -534,24 +535,26 @@ export default function InventoryPage() {
   return (
     <PageWrapper>
       <TopBar>
-        <LogoImg
-          src={PantryLogo}
-          alt='New Trier Township'
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        />
-        <PageTitle
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        >
-          New Trier Township Food Pantry Inventory
-        </PageTitle>
-        <MobileBrandTitle
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        >
-          New Trier Township
-        </MobileBrandTitle>
+        <BrandGroup>
+          <LogoImg
+            src={PantryLogo}
+            alt='New Trier Township'
+            onClick={() => navigate('/inventory')}
+            style={{ cursor: 'pointer' }}
+          />
+          <PageTitle
+            onClick={() => navigate('/inventory')}
+            style={{ cursor: 'pointer' }}
+          >
+            New Trier Township Food Pantry Inventory
+          </PageTitle>
+          <MobileBrandTitle
+            onClick={() => navigate('/inventory')}
+            style={{ cursor: 'pointer' }}
+          >
+            New Trier Township
+          </MobileBrandTitle>
+        </BrandGroup>
         <SearchWrapper>
           <SearchPill>
             <SearchInput
@@ -566,9 +569,15 @@ export default function InventoryPage() {
           </SearchPill>
         </SearchWrapper>
         <NavIcons>
-          <DesktopOnlyActiveNavIcon title='Inventory'>
+          <ActiveNavIcon title='Inventory'>
             <TableRowIcon />
-          </DesktopOnlyActiveNavIcon>
+          </ActiveNavIcon>
+          <NavIcon
+            title='Barcode Generator'
+            onClick={() => navigate('/barcode-generator')}
+          >
+            <FaBarcode size={24} />
+          </NavIcon>
           <DesktopOnlyNavIcon
             title='Scan Out'
             onClick={() => navigate('/scan-out')}
