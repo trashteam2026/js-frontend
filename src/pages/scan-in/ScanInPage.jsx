@@ -517,7 +517,16 @@ export default function ScanInPage() {
           setItemsScanned(profile.itemsScanned || 0);
         }
       } catch (err) {
-        if (!cancelled && (err.code === 'SESSION_ENDED' || err.status === 403)) {
+        // A 404 from the volunteer profile means the server no longer knows this
+        // session (owner ended it, or the backend restarted and lost its in-memory
+        // state). Treat it the same as a regenerated code (403/SESSION_ENDED) so the
+        // volunteer is caught here on mount rather than only when they try to submit.
+        if (
+          !cancelled &&
+          (err.code === 'SESSION_ENDED' ||
+            err.status === 403 ||
+            err.status === 404)
+        ) {
           setSessionEnded(true);
         }
         // otherwise non-fatal
@@ -533,12 +542,18 @@ export default function ScanInPage() {
   }, []);
 
   // Poll every 60 s so idle volunteers are evicted promptly when session ends.
+  // 404 (owner ended the session / backend restarted) is handled the same as a
+  // regenerated code (403/SESSION_ENDED) — all three mean this code is dead.
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         await volunteerApi.getMyProfile();
       } catch (err) {
-        if (err.code === 'SESSION_ENDED' || err.status === 403) {
+        if (
+          err.code === 'SESSION_ENDED' ||
+          err.status === 403 ||
+          err.status === 404
+        ) {
           setSessionEnded(true);
         }
       }
@@ -968,12 +983,13 @@ export default function ScanInPage() {
       {sessionEnded && (
         <SessionEndedOverlay>
           <SessionEndedCard>
-            <SessionEndedTitle>Session Ended</SessionEndedTitle>
+            <SessionEndedTitle>Code No Longer Active</SessionEndedTitle>
             <SessionEndedBody>
-              The volunteer session has ended. Thank you for your help today!
+              This volunteer code is no longer active — it may have been renewed.
+              Please sign in again with the current code.
             </SessionEndedBody>
             <SessionEndedButton type='button' onClick={handleBack}>
-              Sign Out
+              Re-enter Code
             </SessionEndedButton>
           </SessionEndedCard>
         </SessionEndedOverlay>

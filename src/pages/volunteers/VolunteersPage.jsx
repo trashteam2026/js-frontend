@@ -292,7 +292,7 @@ const StatsTable = styled.div`
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 80px 100px 160px;
+  grid-template-columns: 1fr 70px 70px 100px 150px;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -309,8 +309,9 @@ const StatsRow = styled.div`
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 60px 80px;
-    > *:last-child {
+    grid-template-columns: 1fr 60px 70px;
+    /* Hide "Items Added" + "Last Active" on narrow screens. */
+    > *:nth-child(n + 4) {
       display: none;
     }
   }
@@ -507,7 +508,8 @@ export default function VolunteersPage() {
             <StatsTable>
               <StatsRow>
                 <span>Name</span>
-                <span>Sessions</span>
+                <span>Scans</span>
+                <span>Visits</span>
                 <span>Items Added</span>
                 <span>Last Active</span>
               </StatsRow>
@@ -516,7 +518,8 @@ export default function VolunteersPage() {
                   <span style={{ fontWeight: 600, color: '#1a2b4a' }}>
                     {s.volunteer_name}
                   </span>
-                  <span>{s.sessions}</span>
+                  <span>{s.scan_count ?? 0}</span>
+                  <span>{s.active_days ?? 0}</span>
                   <span>{s.total_items ?? 0}</span>
                   <span style={{ color: '#6b7280' }}>
                     {formatDate(s.last_active)}
