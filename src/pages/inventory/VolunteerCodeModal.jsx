@@ -6,6 +6,25 @@ import styled from 'styled-components';
 
 import { volunteerApi } from '../../services/api';
 
+const PANTRY_TZ = 'America/Chicago';
+
+const expiryDateFormat = new Intl.DateTimeFormat([], {
+  timeZone: PANTRY_TZ,
+  month: 'short',
+  day: 'numeric',
+});
+
+const expiryTimeFormat = new Intl.DateTimeFormat([], {
+  timeZone: PANTRY_TZ,
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+const formatSessionExpiry = (iso) => {
+  const date = new Date(iso);
+  return `${expiryDateFormat.format(date)} at ${expiryTimeFormat.format(date)}`;
+};
+
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
@@ -241,13 +260,8 @@ export default function VolunteerCodeModal({ onClose }) {
               {session.expiresAt && (
                 <>
                   {' '}
-                  Expires at{' '}
-                  <strong>
-                    {new Date(session.expiresAt).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </strong>
+                  Expires{' '}
+                  <strong>{formatSessionExpiry(session.expiresAt)}</strong>
                   .
                 </>
               )}

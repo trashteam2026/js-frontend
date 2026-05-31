@@ -8,6 +8,7 @@ import {
   FiUser,
   FiX,
 } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { useUser } from '@/common/contexts/UserContext';
@@ -177,6 +178,16 @@ const SecondaryButton = styled.button`
 
   &:hover {
     background-color: #f0f3f8;
+  }
+`;
+
+const FinishButton = styled(SecondaryButton)`
+  color: #ffffff;
+  background-color: #2a4d8f;
+  border-color: #2a4d8f;
+
+  &:hover {
+    background-color: #1e3a6e;
   }
 `;
 
@@ -483,6 +494,7 @@ const EditError = styled.p`
 `;
 
 export default function ScanInPage() {
+  const navigate = useNavigate();
   const { logout } = useUser();
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
@@ -722,13 +734,17 @@ export default function ScanInPage() {
     setView('camera');
   };
 
-  const handleBack = async () => {
+  const handleFinish = async () => {
     try {
       await logout();
     } catch (err) {
       console.error('Logout error:', err);
+    } finally {
+      navigate('/', { replace: true });
     }
   };
+
+  const handleBack = handleFinish;
 
   const handleAddManually = () => {
     setPendingBarcode(null);
@@ -882,6 +898,9 @@ export default function ScanInPage() {
           <SecondaryButton type='button' onClick={handleAddManually}>
             Add Item(s) Manually
           </SecondaryButton>
+          <FinishButton type='button' onClick={handleFinish}>
+            Finish Scanning
+          </FinishButton>
         </SectionWrapper>
       )}
 
@@ -891,6 +910,7 @@ export default function ScanInPage() {
           mode={formMode}
           initialBarcode={pendingBarcode}
           initialCategory={pendingLookup?.categoryName || ''}
+          initialCategoryId={pendingLookup?.categoryId ?? null}
           initialName={pendingLookup?.productName || ''}
           lookupSource={pendingLookup?.source || null}
           categoryOptions={categories}
@@ -1019,11 +1039,11 @@ export default function ScanInPage() {
           <SessionEndedCard>
             <SessionEndedTitle>Code No Longer Active</SessionEndedTitle>
             <SessionEndedBody>
-              This volunteer code is no longer active — it may have been
-              renewed. Please sign in again with the current code.
+              This volunteer code is no longer active or has expired. You can
+              leave this screen now.
             </SessionEndedBody>
-            <SessionEndedButton type='button' onClick={handleBack}>
-              Re-enter Code
+            <SessionEndedButton type='button' onClick={handleFinish}>
+              Leave
             </SessionEndedButton>
           </SessionEndedCard>
         </SessionEndedOverlay>

@@ -48,6 +48,13 @@ const SectionHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+`;
+
+const SectionHeadingGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 `;
 
 const SectionTitle = styled.h2`
@@ -55,6 +62,13 @@ const SectionTitle = styled.h2`
   font-size: 1rem;
   font-weight: 700;
   color: #1a2b4a;
+`;
+
+const SectionDescription = styled.p`
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #6b7280;
 `;
 
 const ActiveDot = styled.span`
@@ -94,6 +108,9 @@ const VolunteerList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
 `;
 
 const VolunteerRow = styled.div`
@@ -153,12 +170,13 @@ const StatsTable = styled.div`
   flex-direction: column;
   gap: 1px;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 420px;
 `;
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 70px 70px 100px 150px;
+  grid-template-columns: 1fr 70px 100px 150px;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -176,7 +194,7 @@ const StatsRow = styled.div`
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr 60px 70px;
-    /* Hide "Items Added" + "Last Active" on narrow screens. */
+    /* Hide "Last Active" on narrow screens. */
     > *:nth-child(n + 4) {
       display: none;
     }
@@ -253,10 +271,15 @@ export default function VolunteersPage() {
         {/* Active now */}
         <SectionCard>
           <SectionHeader>
-            <SectionTitle>
-              <ActiveDot />
-              Active Now
-            </SectionTitle>
+            <SectionHeadingGroup>
+              <SectionTitle>
+                <ActiveDot />
+                Active Now
+              </SectionTitle>
+              <SectionDescription>
+                Active in the current session.
+              </SectionDescription>
+            </SectionHeadingGroup>
             <RefreshButton
               onClick={fetchActive}
               title='Refresh'
@@ -293,13 +316,18 @@ export default function VolunteersPage() {
         {/* Historical stats */}
         <SectionCard>
           <SectionHeader>
-            <SectionTitle>
-              <FiUser
-                size={15}
-                style={{ marginRight: 6, verticalAlign: 'middle' }}
-              />
-              All-Time Stats
-            </SectionTitle>
+            <SectionHeadingGroup>
+              <SectionTitle>
+                <FiUser
+                  size={15}
+                  style={{ marginRight: 6, verticalAlign: 'middle' }}
+                />
+                All-Time Stats
+              </SectionTitle>
+              <SectionDescription>
+                Stats for the current session code.
+              </SectionDescription>
+            </SectionHeadingGroup>
             <RefreshButton
               onClick={fetchStats}
               title='Refresh'
@@ -312,16 +340,12 @@ export default function VolunteersPage() {
           {loadingStats ? (
             <EmptyText>Loading…</EmptyText>
           ) : stats.length === 0 ? (
-            <EmptyText>
-              No volunteer activity logged yet. Run the DB migration to enable
-              tracking.
-            </EmptyText>
+            <EmptyText>No volunteer activity for the current code yet.</EmptyText>
           ) : (
             <StatsTable>
               <StatsRow>
                 <span>Name</span>
                 <span>Scans</span>
-                <span>Visits</span>
                 <span>Items Added</span>
                 <span>Last Active</span>
               </StatsRow>
@@ -331,7 +355,6 @@ export default function VolunteersPage() {
                     {s.volunteer_name}
                   </span>
                   <span>{s.scan_count ?? 0}</span>
-                  <span>{s.active_days ?? 0}</span>
                   <span>{s.total_items ?? 0}</span>
                   <span style={{ color: '#6b7280' }}>
                     {formatDate(s.last_active)}

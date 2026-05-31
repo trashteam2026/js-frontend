@@ -119,6 +119,7 @@ export const volunteerApi = {
   register: ({ name, code }) =>
     authedRequest('POST', '/api/volunteer/register', { name, code }),
   getMyProfile: () => authedRequest('GET', '/api/volunteer/me'),
+  finishVolunteering: () => authedRequest('DELETE', '/api/volunteer/me'),
 
   // Owner volunteer management
   getActiveVolunteers: () => authedRequest('GET', '/api/volunteer/volunteers'),

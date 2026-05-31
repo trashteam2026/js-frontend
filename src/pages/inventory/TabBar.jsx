@@ -215,6 +215,7 @@ export default function TabBar({
         setOpenDropdown(openDropdown === 'food' ? null : 'food');
       } else {
         onTabChange('food');
+        onCategorySelect(null);
         setOpenDropdown(null);
       }
     } else if (tab === 'non_food') {
@@ -222,6 +223,7 @@ export default function TabBar({
         setOpenDropdown(openDropdown === 'non_food' ? null : 'non_food');
       } else {
         onTabChange('non_food');
+        onCategorySelect(null);
         setOpenDropdown(null);
       }
     }

@@ -71,8 +71,10 @@ export async function lookupByBarcode(barcode) {
 export async function addItem({
   name,
   category,
+  categoryId,
   expirationMonth,
   expirationYear,
+  noExpiration = false,
   quantity,
   barcode,
   categories = [],
@@ -80,14 +82,19 @@ export async function addItem({
   volunteerToken = null,
 }) {
   const normalizedCategory = normalizeCategoryName(category);
-  const matchedCategory = categories.find(
-    (entry) => normalizeCategoryName(entry.name) === normalizedCategory
-  );
+  const normalizedCategoryId =
+    categoryId === undefined || categoryId === null || categoryId === ''
+      ? null
+      : Number.parseInt(categoryId, 10);
+  const matchedCategory = normalizedCategoryId
+    ? categories.find((entry) => Number(entry.id) === normalizedCategoryId)
+    : categories.find(
+        (entry) => normalizeCategoryName(entry.name) === normalizedCategory
+      );
 
-  // A typed category that doesn't match an existing one must be rejected rather
-  // than saved with the category omitted (which the backend would store as a
-  // NULL category_id). The form blocks this first; this is the safety net.
-  if (normalizedCategory && !matchedCategory) {
+  // The volunteer form only exposes existing categories. Keep this safety net
+  // so a stale or tampered selection never becomes an uncategorized item.
+  if (!matchedCategory) {
     const err = new Error('Please pick an existing category');
     err.code = 'CATEGORY_NOT_FOUND';
     throw err;
@@ -95,15 +102,14 @@ export async function addItem({
 
   const payload = {
     name,
-    expirationDate: toExpirationDate(expirationMonth, expirationYear),
+    expirationDate: noExpiration
+      ? null
+      : toExpirationDate(expirationMonth, expirationYear),
     quantity,
     barcode: barcode || null,
     volunteerName: volunteerName || null,
+    categoryId: matchedCategory.id,
   };
-
-  if (matchedCategory?.id) {
-    payload.categoryId = matchedCategory.id;
-  }
 
   const headers = { 'Content-Type': 'application/json' };
   if (volunteerToken) headers['Authorization'] = `Bearer ${volunteerToken}`;
@@ -126,9 +132,11 @@ export async function addItem({
 
   const localRecord = {
     name,
-    category,
+    category: matchedCategory.name,
+    categoryId: matchedCategory.id,
     expirationMonth,
     expirationYear,
+    noExpiration,
     quantity,
     barcode: barcode || null,
     timestamp: new Date().toISOString(),

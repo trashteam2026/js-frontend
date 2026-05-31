@@ -3,7 +3,6 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
-import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
 import { auth } from '@/firebase-config';
 import { volunteerApi } from '@/services/api';
@@ -139,6 +138,15 @@ const NextButton = styled.button`
   }
 `;
 
+const ErrorText = styled.p`
+  width: 100%;
+  margin: 0;
+  color: red;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  text-align: center;
+`;
+
 export default function VolunteerEntryPage() {
   const navigate = useNavigate();
   const { role, isLoading } = useUser();
@@ -227,7 +235,7 @@ export default function VolunteerEntryPage() {
       <Divider />
 
       <Form onSubmit={handleSubmit}>
-        {error && <RedSpan>{error}</RedSpan>}
+        {error && <ErrorText>{error}</ErrorText>}
 
         <Label htmlFor='volunteer-name'>Your Name</Label>
         <TextInput
