@@ -1,3 +1,4 @@
+import { auth } from '@/firebase-config';
 import { MOCK_CATEGORIES } from '@/pages/inventory/mockData';
 
 const STORAGE_KEY = 'pantry_volunteer_added_items';
@@ -30,7 +31,17 @@ export function getAddedItems() {
 }
 
 export async function fetchCategories() {
-  const response = await fetch(buildUrl('/api/inventory/categories'));
+  // GET /api/inventory/categories now requires a valid Firebase token. The
+  // signed-in anonymous volunteer's token is attached the same way addItem's
+  // caller does (auth.currentUser.getIdToken()) so scan-in can still load
+  // categories.
+  const token = await auth.currentUser?.getIdToken().catch(() => null);
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(buildUrl('/api/inventory/categories'), {
+    headers,
+  });
 
   if (!response.ok) {
     throw new Error('Failed to load categories');

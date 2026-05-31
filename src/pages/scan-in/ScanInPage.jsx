@@ -510,24 +510,46 @@ export default function ScanInPage() {
     };
 
     const loadProfile = async () => {
-      try {
+      const attempt = async () => {
         const profile = await volunteerApi.getMyProfile();
         if (!cancelled) {
           setVolunteerName(profile.name || '');
           setItemsScanned(profile.itemsScanned || 0);
         }
+      };
+
+      try {
+        await attempt();
       } catch (err) {
-        // A 404 from the volunteer profile means the server no longer knows this
-        // session (owner ended it, or the backend restarted and lost its in-memory
-        // state). Treat it the same as a regenerated code (403/SESSION_ENDED) so the
-        // volunteer is caught here on mount rather than only when they try to submit.
-        if (
-          !cancelled &&
-          (err.code === 'SESSION_ENDED' ||
-            err.status === 403 ||
-            err.status === 404)
-        ) {
+        // A 403/SESSION_ENDED means this volunteer IS registered but the owner
+        // ended or regenerated the code — that's a definitive dead session, so
+        // show the overlay immediately.
+        if (!cancelled && (err.code === 'SESSION_ENDED' || err.status === 403)) {
           setSessionEnded(true);
+          return;
+        }
+
+        // A 404 ("No active volunteer session") can be a transient race: a
+        // volunteer who just entered a valid code may reach /scan-in before their
+        // POST /register has committed. Retry once after a short delay before
+        // declaring the session dead, so a just-registered volunteer isn't bounced
+        // to the "Code No Longer Active" overlay. If it's still 404 (or now 403)
+        // after the retry, the session is genuinely gone.
+        if (err.status === 404) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          if (cancelled) return;
+          try {
+            await attempt();
+          } catch (retryErr) {
+            if (
+              !cancelled &&
+              (retryErr.code === 'SESSION_ENDED' ||
+                retryErr.status === 403 ||
+                retryErr.status === 404)
+            ) {
+              setSessionEnded(true);
+            }
+          }
         }
         // otherwise non-fatal
       }

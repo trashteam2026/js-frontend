@@ -35,6 +35,10 @@ export function UserProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Optimistic default until the backend profile resolves: anonymous users
+        // are volunteers, everyone else is tentatively an owner. The backend's
+        // `isOwner` is authoritative and overrides this once /auth/profile
+        // resolves (see below).
         setRole(firebaseUser.isAnonymous ? 'volunteer' : 'owner');
         try {
           const idToken = await firebaseUser.getIdToken();
@@ -44,8 +48,13 @@ export function UserProvider({ children }) {
 
           if (response.ok) {
             const backendUserData = await response.json();
+            // Role is decided by the backend now, not by isAnonymous.
+            setRole(backendUserData.isOwner ? 'owner' : 'volunteer');
             setUser({ ...firebaseUser, ...backendUserData });
           } else {
+            // Transient failure: keep the optimistic default (anonymous →
+            // volunteer, otherwise owner) so a profile-fetch hiccup doesn't lock
+            // a dev owner out.
             setUser(firebaseUser);
           }
         } catch {

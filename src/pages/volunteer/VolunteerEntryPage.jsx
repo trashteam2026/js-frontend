@@ -175,12 +175,16 @@ export default function VolunteerEntryPage() {
 
       const credential = await signInAnonymously(auth);
 
-      // Register the volunteer's name with the backend. Best-effort — if this
-      // fails, the volunteer can still scan, they just won't appear in the
-      // owner's volunteer list.
-      try {
+      // Register the volunteer with the backend BEFORE navigation proceeds. This
+      // must reliably land first: ScanInPage's loadProfile calls getMyProfile on
+      // mount and a 404 (volunteer row not yet in active_volunteers) would
+      // otherwise flash the "Code No Longer Active" overlay right after a valid
+      // code. We await it (and retry once on a transient failure) so the INSERT
+      // is in flight/committed before the role-change effect routes to /scan-in.
+      // (ScanInPage also retries getMyProfile once on 404 as a safety net.)
+      const registerVolunteer = async () => {
         const idToken = await credential.user.getIdToken();
-        await fetch(
+        return fetch(
           `${import.meta.env.VITE_BACKEND_URL}/api/volunteer/register`,
           {
             method: 'POST',
@@ -191,8 +195,14 @@ export default function VolunteerEntryPage() {
             body: JSON.stringify({ name: name.trim(), code: code.trim() }),
           }
         );
+      };
+
+      try {
+        const res = await registerVolunteer();
+        if (!res.ok) await registerVolunteer();
       } catch {
-        // non-fatal
+        // Best-effort: even if registration ultimately fails the volunteer can
+        // still scan; ScanInPage's 404 retry covers the transient case.
       }
 
       // Navigation handled by the role-watching useEffect above.
