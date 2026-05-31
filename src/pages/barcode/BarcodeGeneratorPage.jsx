@@ -1,47 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FaBarcode } from 'react-icons/fa';
-import { FiArrowLeft, FiPrinter, FiX } from 'react-icons/fi';
+import { FiPrinter, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
 
 import PrintQuantityModal from '@/common/components/PrintQuantityModal';
+import OwnerHeader from '@/common/components/navigation/OwnerHeader';
 import { barcodeApi, categoriesApi } from '@/services/api';
-import {
-  openBarcodePrintWindow,
-  renderBarcodeSvg,
-} from '@/utils/barcodePrint';
+import { openBarcodePrintWindow, renderBarcodeSvg } from '@/utils/barcodePrint';
+import styled from 'styled-components';
 
 const PageWrapper = styled.div`
   min-height: 100vh;
   background: #ececec;
   color: #111827;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-
-  @media (max-width: 767px) {
-    padding: 12px;
-  }
-`;
-
-const IconButton = styled.button`
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 9999px;
-  display: grid;
-  place-items: center;
-  background: #d4dce8;
-  color: #1f2937;
-  cursor: pointer;
-
-  &:hover {
-    background: #c6d2e2;
-  }
 `;
 
 const Title = styled.h1`
@@ -340,17 +311,7 @@ export default function BarcodeGeneratorPage() {
 
   return (
     <PageWrapper>
-      <TopBar>
-        <IconButton
-          type='button'
-          title='Back to inventory'
-          aria-label='Back to inventory'
-          onClick={() => navigate('/inventory')}
-        >
-          <FiArrowLeft size={22} />
-        </IconButton>
-        <Title>Barcode Generator</Title>
-      </TopBar>
+      <OwnerHeader active='barcode' />
 
       <Content>
         <HeaderRow>
@@ -416,7 +377,9 @@ export default function BarcodeGeneratorPage() {
               </div>
               <div>
                 <strong>Category:</strong>{' '}
-                {result.category_name || selectedCategory?.name || 'Uncategorized'}
+                {result.category_name ||
+                  selectedCategory?.name ||
+                  'Uncategorized'}
               </div>
               <div>
                 <strong>Barcode:</strong> {result.barcode}

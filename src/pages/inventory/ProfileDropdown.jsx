@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { FiKey } from 'react-icons/fi';
 
 import { useUser } from '@/common/contexts/UserContext';
 import PropTypes from 'prop-types';
@@ -20,6 +21,25 @@ const Menu = styled.div`
   gap: 8px;
 `;
 
+const MenuButton = styled.button`
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d6dce8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a2b4a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    background: #f0f4fa;
+  }
+`;
+
 const LogoutButton = styled.button`
   width: 100%;
   padding: 10px 12px;
@@ -36,7 +56,7 @@ const LogoutButton = styled.button`
   }
 `;
 
-export default function ProfileDropdown({ onClose }) {
+export default function ProfileDropdown({ onClose, onVolunteerSession }) {
   const { logout } = useUser();
 
   useEffect(() => {
@@ -58,6 +78,12 @@ export default function ProfileDropdown({ onClose }) {
 
   return (
     <Menu>
+      {onVolunteerSession && (
+        <MenuButton type='button' onClick={onVolunteerSession}>
+          <FiKey size={16} />
+          Volunteer Session
+        </MenuButton>
+      )}
       <LogoutButton type='button' onClick={handleLogout}>
         Log Out
       </LogoutButton>
@@ -67,4 +93,5 @@ export default function ProfileDropdown({ onClose }) {
 
 ProfileDropdown.propTypes = {
   onClose: PropTypes.func.isRequired,
+  onVolunteerSession: PropTypes.func,
 };

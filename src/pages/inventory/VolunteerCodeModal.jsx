@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FiCheck, FiCopy, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -16,15 +17,22 @@ const Backdrop = styled.div`
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 12px;
   padding: 28px 24px 24px;
-  width: 100%;
-  max-width: 340px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: relative;
+
+  @media (max-width: 767px) {
+    padding: 24px 18px 20px;
+    gap: 14px;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -69,6 +77,7 @@ const CodeBox = styled.div`
   align-items: center;
   justify-content: center;
   gap: 10px;
+  min-width: 0;
 `;
 
 const CodeText = styled.span`
@@ -77,6 +86,13 @@ const CodeText = styled.span`
   letter-spacing: 6px;
   color: #1a2b4a;
   font-family: monospace;
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 767px) {
+    font-size: 1.6rem;
+    letter-spacing: 4px;
+  }
 `;
 
 const CopyButton = styled.button`
@@ -96,6 +112,7 @@ const CopyButton = styled.button`
 `;
 
 const PrimaryButton = styled.button`
+  box-sizing: border-box;
   width: 100%;
   padding: 10px;
   background: #2c5e95;
@@ -208,8 +225,8 @@ export default function VolunteerCodeModal({ onClose }) {
         {!loading && !session?.active && (
           <>
             <StatusText>
-              Generate a one-time code to give volunteers access to the
-              check-in scanner.
+              Generate a one-time code to give volunteers access to the check-in
+              scanner.
             </StatusText>
             <PrimaryButton onClick={handleGenerate} disabled={actionLoading}>
               {actionLoading ? 'Generating…' : 'Generate Code'}
@@ -222,13 +239,16 @@ export default function VolunteerCodeModal({ onClose }) {
             <StatusText>
               Share this code with volunteers.
               {session.expiresAt && (
-                <> Expires at{' '}
+                <>
+                  {' '}
+                  Expires at{' '}
                   <strong>
                     {new Date(session.expiresAt).toLocaleTimeString([], {
                       hour: 'numeric',
                       minute: '2-digit',
                     })}
-                  </strong>.
+                  </strong>
+                  .
                 </>
               )}
             </StatusText>
