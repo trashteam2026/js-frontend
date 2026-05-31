@@ -8,10 +8,9 @@ import {
   FiPlusCircle,
 } from 'react-icons/fi';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-
-import useIsMobile from '@/common/hooks/useIsMobile';
 
 import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
@@ -253,7 +252,9 @@ const AddItemButton = styled.button`
   padding: 8px 12px;
   cursor: pointer;
   font-weight: 500;
-  &:hover { background: #eef3fa; }
+  &:hover {
+    background: #eef3fa;
+  }
 `;
 
 const AddItemInput = styled.input`
@@ -265,7 +266,9 @@ const AddItemInput = styled.input`
   color: #1a2b4a;
   padding: 8px 12px;
   outline: none;
-  &::placeholder { color: #9ba8bc; }
+  &::placeholder {
+    color: #9ba8bc;
+  }
 
   @media (max-width: 767px) {
     font-size: 16px;
@@ -280,8 +283,13 @@ const AddItemSave = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  &:hover { background: #eef3fa; }
-  &:disabled { color: #9ba8bc; cursor: default; }
+  &:hover {
+    background: #eef3fa;
+  }
+  &:disabled {
+    color: #9ba8bc;
+    cursor: default;
+  }
 
   @media (max-width: 767px) {
     min-width: 44px;
@@ -296,7 +304,9 @@ const AddItemCancel = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  &:hover { background: #f0f3f8; }
+  &:hover {
+    background: #f0f3f8;
+  }
 
   @media (max-width: 767px) {
     min-width: 44px;
@@ -416,7 +426,11 @@ export default function CategorySection({
             <FiFilter size={17} />
           </FilterTrigger>
           {sortOpen && (
-            <FilterPopover role='menu' $top={popoverPos.top} $right={popoverPos.right}>
+            <FilterPopover
+              role='menu'
+              $top={popoverPos.top}
+              $right={popoverPos.right}
+            >
               {SORT_OPTIONS.map((opt) => (
                 <FilterOption
                   key={opt.value}
@@ -456,10 +470,7 @@ export default function CategorySection({
                   <FiEdit2 size={14} />
                   Edit
                 </KebabItem>
-                <KebabItem
-                  type='button'
-                  onClick={() => setKebabOpen(false)}
-                >
+                <KebabItem type='button' onClick={() => setKebabOpen(false)}>
                   <FiFilter size={14} />
                   Filter
                 </KebabItem>
@@ -498,7 +509,10 @@ export default function CategorySection({
                 if (e.key === 'Escape') cancelAdding();
               }}
             />
-            <AddItemSave onClick={handleSave} disabled={!newItemName.trim() || saving}>
+            <AddItemSave
+              onClick={handleSave}
+              disabled={!newItemName.trim() || saving}
+            >
               Add
             </AddItemSave>
             <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>

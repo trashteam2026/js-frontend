@@ -249,10 +249,48 @@ const PAD_LEFT = 30;
 const PAD_TOP = 6;
 const CHART_H = 100;
 
+// All activity day/hour bucketing happens in the pantry's timezone so the
+// results are consistent regardless of the viewer's browser timezone.
+const PANTRY_TZ = 'America/Chicago';
+
+const chicagoPartsFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: PANTRY_TZ,
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  hour12: false,
+});
+
+const chicagoTimeFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: PANTRY_TZ,
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+function chicagoParts(date) {
+  const parts = {};
+  for (const p of chicagoPartsFormat.formatToParts(date)) {
+    if (p.type !== 'literal') parts[p.type] = p.value;
+  }
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: Number(parts.hour) % 24, // hour12:false can report 24 at midnight
+  };
+}
+
+function chicagoDateString(date) {
+  const { year, month, day } = chicagoParts(date);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 function computeTrafficData(logs) {
   const counts = Object.fromEntries(TRAFFIC_HOURS.map((h) => [h, 0]));
   for (const log of logs) {
-    const hour = new Date(log.created_at).getHours();
+    const hour = chicagoParts(new Date(log.created_at)).hour;
     if (hour in counts) counts[hour] += log.quantity;
   }
   return TRAFFIC_HOURS.map((h) => counts[h]);
@@ -350,33 +388,30 @@ const MONTH_NAMES = [
   'December',
 ];
 
-function formatDayTitle(date) {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+function formatDayTitle(parts) {
+  return `${MONTH_NAMES[parts.month - 1]} ${parts.day}, ${parts.year}`;
 }
 
 function toDateString(date) {
-  // YYYY-MM-DD in local time, suitable for the API's date params
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  // YYYY-MM-DD in the pantry timezone, suitable for the API's date params
+  return chicagoDateString(date);
 }
 
 function groupLogs(logs) {
   const byDate = {};
   for (const log of logs) {
     const date = new Date(log.created_at);
-    const key = date.toDateString();
-    if (!byDate[key]) byDate[key] = { date, added: [], removed: [] };
-    const time = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
+    const key = chicagoDateString(date);
+    if (!byDate[key])
+      byDate[key] = { key, parts: chicagoParts(date), added: [], removed: [] };
+    const time = chicagoTimeFormat.format(date);
     byDate[key][log.action].push({
       name: log.item_name,
       qty: log.quantity,
       time,
     });
   }
-  return Object.values(byDate).sort((a, b) => b.date - a.date);
+  return Object.values(byDate).sort((a, b) => (a.key < b.key ? 1 : -1));
 }
 
 function computeStats(logs) {
@@ -514,8 +549,8 @@ export default function ActivityLogPage() {
         )}
 
         {displayActivity.map((entry) => (
-          <DaySection key={entry.date.toISOString()}>
-            <DayTitle>{formatDayTitle(entry.date)}</DayTitle>
+          <DaySection key={entry.key}>
+            <DayTitle>{formatDayTitle(entry.parts)}</DayTitle>
             <TableWrapper>
               <SectionHeader>Items Added</SectionHeader>
               {entry.added.map((item, i) => (

@@ -282,7 +282,7 @@ export default function VolunteersPage() {
                     </VolunteerMeta>
                   </VolunteerInfo>
                   <StatBadge>
-                    {v.itemsScanned} {v.itemsScanned === 1 ? 'item' : 'items'}
+                    {v.itemsScanned} {v.itemsScanned === 1 ? 'scan' : 'scans'}
                   </StatBadge>
                 </VolunteerRow>
               ))}

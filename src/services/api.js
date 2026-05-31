@@ -84,7 +84,8 @@ export const activityApi = {
     const qs = params.toString();
     return authedRequest('GET', `/activity${qs ? `?${qs}` : ''}`);
   },
-  updateLog: (id, quantity) => authedRequest('PATCH', `/activity/${id}`, { quantity }),
+  updateLog: (id, quantity) =>
+    authedRequest('PATCH', `/activity/${id}`, { quantity }),
   deleteLog: (id) => authedRequest('DELETE', `/activity/${id}`),
 };
 

@@ -308,7 +308,8 @@ export default function TabBar({
           <FiPlus size={26} color='#ffffff' />
         </AddButton>
         <FilterAllButton onClick={onFilterAll} aria-label='Filter All'>
-          <FilterAllLabel>Filter All</FilterAllLabel> <FiFilter size={24} strokeWidth={2.2} />
+          <FilterAllLabel>Filter All</FilterAllLabel>{' '}
+          <FiFilter size={24} strokeWidth={2.2} />
         </FilterAllButton>
       </RightSection>
     </TabContainer>

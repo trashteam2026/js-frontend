@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FiPrinter, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 

@@ -84,6 +84,15 @@ export async function addItem({
     (entry) => normalizeCategoryName(entry.name) === normalizedCategory
   );
 
+  // A typed category that doesn't match an existing one must be rejected rather
+  // than saved with the category omitted (which the backend would store as a
+  // NULL category_id). The form blocks this first; this is the safety net.
+  if (normalizedCategory && !matchedCategory) {
+    const err = new Error('Please pick an existing category');
+    err.code = 'CATEGORY_NOT_FOUND';
+    throw err;
+  }
+
   const payload = {
     name,
     expirationDate: toExpirationDate(expirationMonth, expirationYear),

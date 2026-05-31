@@ -1,8 +1,22 @@
 import { useState } from 'react';
+
 import styled from 'styled-components';
 
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DAY_HEADERS = ['S','M','T','W','T','F','S'];
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+const DAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -235,14 +249,23 @@ export default function DateRangePicker({ value, onChange, onClose }) {
 
   const cells = [];
   for (let i = firstDay - 1; i >= 0; i--) {
-    cells.push({ date: toMidnight(new Date(prevYear, prevMon, prevDays - i)), current: false });
+    cells.push({
+      date: toMidnight(new Date(prevYear, prevMon, prevDays - i)),
+      current: false,
+    });
   }
   for (let d = 1; d <= numDays; d++) {
-    cells.push({ date: toMidnight(new Date(viewYear, viewMonth, d)), current: true });
+    cells.push({
+      date: toMidnight(new Date(viewYear, viewMonth, d)),
+      current: true,
+    });
   }
   let nextIdx = 1;
   while (cells.length < 42) {
-    cells.push({ date: toMidnight(new Date(nextYear, nextMon, nextIdx++)), current: false });
+    cells.push({
+      date: toMidnight(new Date(nextYear, nextMon, nextIdx++)),
+      current: false,
+    });
   }
 
   const handleDayClick = (date) => {
@@ -260,23 +283,30 @@ export default function DateRangePicker({ value, onChange, onClose }) {
   };
 
   const goToPrevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
-    else setViewMonth((m) => m - 1);
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
   };
 
   const goToNextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
-    else setViewMonth((m) => m + 1);
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
   };
 
   const rangeDisplay =
     tempStart && tempEnd
       ? `${formatDate(tempStart)} - ${formatDate(tempEnd)}`
       : tempStart
-      ? `${formatDate(tempStart)} - MM/DD/YYYY`
-      : 'MM/DD/YYYY - MM/DD/YYYY';
+        ? `${formatDate(tempStart)} - MM/DD/YYYY`
+        : 'MM/DD/YYYY - MM/DD/YYYY';
 
-  const years = Array.from({ length: 20 }, (_, i) => today.getFullYear() - 5 + i);
+  const years = Array.from(
+    { length: 20 },
+    (_, i) => today.getFullYear() - 5 + i
+  );
 
   const handleOk = () => {
     if (tempStart && tempEnd) {
@@ -299,22 +329,30 @@ export default function DateRangePicker({ value, onChange, onClose }) {
                 onChange={(e) => setViewMonth(Number(e.target.value))}
               >
                 {MONTH_SHORT.map((m, i) => (
-                  <option key={i} value={i}>{m}</option>
+                  <option key={i} value={i}>
+                    {m}
+                  </option>
                 ))}
               </NavSelect>
               <NavArrow onClick={goToNextMonth}>&gt;</NavArrow>
             </NavGroup>
             <NavGroup>
-              <NavArrow onClick={() => setViewYear((y) => y - 1)}>&lt;</NavArrow>
+              <NavArrow onClick={() => setViewYear((y) => y - 1)}>
+                &lt;
+              </NavArrow>
               <NavSelect
                 value={viewYear}
                 onChange={(e) => setViewYear(Number(e.target.value))}
               >
                 {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
                 ))}
               </NavSelect>
-              <NavArrow onClick={() => setViewYear((y) => y + 1)}>&gt;</NavArrow>
+              <NavArrow onClick={() => setViewYear((y) => y + 1)}>
+                &gt;
+              </NavArrow>
             </NavGroup>
           </MonthYearNav>
 
@@ -330,10 +368,7 @@ export default function DateRangePicker({ value, onChange, onClose }) {
               const isEnd = sameDay(date, tempEnd);
               const isSingle = sameDay(tempStart, tempEnd);
               const inRange =
-                tempStart &&
-                tempEnd &&
-                date > tempStart &&
-                date < tempEnd;
+                tempStart && tempEnd && date > tempStart && date < tempEnd;
               const showBg =
                 (inRange || ((isStart || isEnd) && !isSingle)) &&
                 !!(tempStart && tempEnd);

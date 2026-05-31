@@ -154,7 +154,12 @@ const DeleteButton = styled.button`
   }
 `;
 
-export default function EditCategoryModal({ category, onClose, onSave, onDeleteRequest }) {
+export default function EditCategoryModal({
+  category,
+  onClose,
+  onSave,
+  onDeleteRequest,
+}) {
   const [name, setName] = useState(category.name);
   const [saving, setSaving] = useState(false);
 

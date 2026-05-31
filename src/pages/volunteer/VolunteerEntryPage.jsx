@@ -6,8 +6,8 @@ import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
 import { auth } from '@/firebase-config';
-import { signInAnonymously } from 'firebase/auth';
 import { volunteerApi } from '@/services/api';
+import { signInAnonymously } from 'firebase/auth';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -208,7 +208,10 @@ export default function VolunteerEntryPage() {
       // Navigation handled by the role-watching useEffect above.
     } catch (err) {
       const msg = err.message || '';
-      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('expired')) {
+      if (
+        msg.toLowerCase().includes('invalid') ||
+        msg.toLowerCase().includes('expired')
+      ) {
         setError('Invalid or expired code. Please try again.');
       } else {
         setError('Unable to complete sign-in. Please try again.');

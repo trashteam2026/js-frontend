@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiArrowLeft, FiCheck, FiEdit2, FiList, FiTrash2, FiUser, FiX } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiEdit2,
+  FiList,
+  FiTrash2,
+  FiUser,
+  FiX,
+} from 'react-icons/fi';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { useUser } from '@/common/contexts/UserContext';
@@ -524,7 +532,10 @@ export default function ScanInPage() {
         // A 403/SESSION_ENDED means this volunteer IS registered but the owner
         // ended or regenerated the code — that's a definitive dead session, so
         // show the overlay immediately.
-        if (!cancelled && (err.code === 'SESSION_ENDED' || err.status === 403)) {
+        if (
+          !cancelled &&
+          (err.code === 'SESSION_ENDED' || err.status === 403)
+        ) {
           setSessionEnded(true);
           return;
         }
@@ -839,9 +850,7 @@ export default function ScanInPage() {
         >
           <FiList size={13} />
           {volunteerName}
-          {itemsScanned > 0 && (
-            <ItemsCount>&nbsp;· {itemsScanned}</ItemsCount>
-          )}
+          {itemsScanned > 0 && <ItemsCount>&nbsp;· {itemsScanned}</ItemsCount>}
         </HistoryButton>
       )}
 
@@ -894,7 +903,10 @@ export default function ScanInPage() {
         <HistoryPanel>
           <HistoryHeader>
             <HistoryTitle>
-              <FiList size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              <FiList
+                size={15}
+                style={{ marginRight: 6, verticalAlign: 'middle' }}
+              />
               This Session
             </HistoryTitle>
             <CloseButton
@@ -1007,8 +1019,8 @@ export default function ScanInPage() {
           <SessionEndedCard>
             <SessionEndedTitle>Code No Longer Active</SessionEndedTitle>
             <SessionEndedBody>
-              This volunteer code is no longer active — it may have been renewed.
-              Please sign in again with the current code.
+              This volunteer code is no longer active — it may have been
+              renewed. Please sign in again with the current code.
             </SessionEndedBody>
             <SessionEndedButton type='button' onClick={handleBack}>
               Re-enter Code

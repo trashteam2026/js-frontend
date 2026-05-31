@@ -322,6 +322,18 @@ export default function ItemForm({
       focusCategory();
       return;
     }
+    if (!isDatabaseMatch) {
+      const matchesExisting = (categoryOptions || []).some(
+        (option) =>
+          typeof option?.name === 'string' &&
+          option.name.trim().toLowerCase() === trimmedCategory.toLowerCase()
+      );
+      if (!matchesExisting) {
+        setError('Please pick an existing category');
+        focusCategory();
+        return;
+      }
+    }
     if (!month || !year) {
       setError('Must input expiration date');
       return;
