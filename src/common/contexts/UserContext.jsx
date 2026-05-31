@@ -35,11 +35,12 @@ export function UserProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Optimistic default until the backend profile resolves: anonymous users
-        // are volunteers, everyone else is tentatively an owner. The backend's
-        // `isOwner` is authoritative and overrides this once /auth/profile
-        // resolves (see below).
-        setRole(firebaseUser.isAnonymous ? 'volunteer' : 'owner');
+        // Anonymous sign-in IS the volunteer flow and needs no backend
+        // confirmation. Every other (non-anonymous) user is an owner candidate
+        // whose role stays pending (null) until the backend's authoritative
+        // `isOwner` resolves. We never optimistically grant owner, so a
+        // profile-fetch failure fails CLOSED (no role) rather than open.
+        setRole(firebaseUser.isAnonymous ? 'volunteer' : null);
         try {
           const idToken = await firebaseUser.getIdToken();
           const response = await fetch(buildUrl('/auth/profile'), {
@@ -48,13 +49,21 @@ export function UserProvider({ children }) {
 
           if (response.ok) {
             const backendUserData = await response.json();
-            // Role is decided by the backend now, not by isAnonymous.
-            setRole(backendUserData.isOwner ? 'owner' : 'volunteer');
+            // 'volunteer' is reachable ONLY via anonymous sign-in. A
+            // non-anonymous, non-allowlisted user resolves to null (no role) —
+            // rejected at login, never silently downgraded to a volunteer.
+            setRole(
+              firebaseUser.isAnonymous
+                ? 'volunteer'
+                : backendUserData.isOwner
+                  ? 'owner'
+                  : null
+            );
             setUser({ ...firebaseUser, ...backendUserData });
           } else {
-            // Transient failure: keep the optimistic default (anonymous →
-            // volunteer, otherwise owner) so a profile-fetch hiccup doesn't lock
-            // a dev owner out.
+            // Fail closed: a profile-fetch failure leaves a non-anonymous user
+            // with no role. Anonymous volunteers keep their role since it
+            // doesn't depend on the backend.
             setUser(firebaseUser);
           }
         } catch {
@@ -70,9 +79,29 @@ export function UserProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  // Authoritative owner gate. After a non-anonymous sign-in, ask the backend
+  // whether this account is on the OWNER_EMAILS allowlist; if not, sign the user
+  // back out and throw `auth/not-owner` so the login screen can reject them.
+  // Fails closed: a profile-fetch failure is treated as "not an owner".
+  const assertOwnerOrReject = async (firebaseUser) => {
+    const idToken = await firebaseUser.getIdToken();
+    const response = await fetch(buildUrl('/auth/profile'), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    const profile = response.ok ? await response.json() : null;
+    if (!profile?.isOwner) {
+      await signOut(auth);
+      const error = new Error('This login is for pantry owners only.');
+      error.code = 'auth/not-owner';
+      throw error;
+    }
+  };
+
   const login = async (email, password) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      // Owner-only login: reject (and sign back out) any non-allowlisted account.
+      await assertOwnerOrReject(credential.user);
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -92,20 +121,26 @@ export function UserProvider({ children }) {
 
   // Signs in with Google popup and syncs the user to the MySQL backend.
   const googleAuth = async () => {
+    let result;
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
-
-      await fetch(buildUrl('/auth/token'), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
+      result = await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error('Google auth error:', error);
       throw new Error('Failed to complete Google authentication');
     }
+
+    // Owner-only login: gate before syncing. Throws `auth/not-owner` (and signs
+    // the user back out) for non-allowlisted accounts; let it propagate so the
+    // login screen shows the access-denied message.
+    await assertOwnerOrReject(result.user);
+
+    const idToken = await result.user.getIdToken();
+    await fetch(buildUrl('/auth/token'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
   };
 
   const requestPasswordReset = async (email) => {

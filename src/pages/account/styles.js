@@ -46,6 +46,8 @@ export const StyledPage = styled.div`
   justify-content: center;
   align-items: center;
   position: relative;
+  padding: 24px;
+  box-sizing: border-box;
 `;
 
 export const StyledButton = styled(Button.Primary)`
