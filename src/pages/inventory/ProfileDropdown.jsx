@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { FiKey } from 'react-icons/fi';
 
 import { useUser } from '@/common/contexts/UserContext';
 import PropTypes from 'prop-types';
@@ -33,7 +32,7 @@ const MenuButton = styled.button`
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 
   &:hover {
     background: #f0f4fa;
@@ -80,7 +79,6 @@ export default function ProfileDropdown({ onClose, onVolunteerSession }) {
     <Menu>
       {onVolunteerSession && (
         <MenuButton type='button' onClick={onVolunteerSession}>
-          <FiKey size={16} />
           Volunteer Session
         </MenuButton>
       )}

@@ -12,27 +12,36 @@ import VolunteerCodeModal from '@/pages/inventory/VolunteerCodeModal';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
+const DESKTOP_SEARCH_COMFORT_WIDTH = 455;
+const DESKTOP_SEARCH_COMFORT_GAP = 32;
+
 // ─── Styled components ────────────────────────────────────────────────────────
 //
 // Shared top bar for every owner page (Inventory, Scan Out, Activity,
 // Volunteers, Barcode Generator). One source of truth for the navigation
 // icon set so the same actions appear on every page.
 //
-// Responsiveness: the bar is a wrapping flex row. The brand group shrinks
-// (min-width: 0) and the icon cluster never shrinks, so the action icons stay
-// fully visible on narrow screens instead of being pushed off-screen. The
-// optional search field wraps onto its own line below on mobile.
+// Responsiveness: desktop uses a three-track grid so optional search sits on the
+// page centerline, not merely between brand and nav. Mobile switches back to the
+// existing wrapping flex row so search remains a full-width second row.
 
 const TopBar = styled.div`
-  display: flex;
+  display: ${({ $stacked }) => ($stacked ? 'flex' : 'grid')};
+  grid-template-columns: ${({ $hasSearch }) =>
+    $hasSearch
+      ? 'minmax(0, 1fr) minmax(180px, 455px) minmax(0, 1fr)'
+      : 'minmax(0, 1fr) auto'};
   align-items: center;
-  flex-wrap: wrap;
+  column-gap: 14px;
   gap: 14px;
   padding: 8px 24px;
   background-color: #ececec;
   flex-shrink: 0;
+  flex-wrap: ${({ $stacked }) => ($stacked ? 'wrap' : 'nowrap')};
 
   @media (max-width: 767px) {
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     padding: 8px 12px;
   }
@@ -43,7 +52,8 @@ const BrandGroup = styled.div`
   align-items: center;
   gap: 14px;
   min-width: 0;
-  flex: 0 1 auto;
+  justify-self: start;
+  flex: ${({ $stacked }) => ($stacked ? '0 1 auto' : 'initial')};
 
   @media (max-width: 767px) {
     gap: 8px;
@@ -101,7 +111,10 @@ const SearchWrapper = styled.div`
   display: flex;
   justify-content: center;
   min-width: 0;
-  flex: 1 1 0;
+  width: 100%;
+  grid-column: 2;
+  flex: ${({ $stacked }) => ($stacked ? '1 1 100%' : 'initial')};
+  order: ${({ $stacked }) => ($stacked ? 99 : 'initial')};
 
   @media (max-width: 767px) {
     flex: 1 1 100%;
@@ -112,7 +125,7 @@ const SearchWrapper = styled.div`
 const SearchPill = styled.div`
   box-sizing: border-box;
   width: 100%;
-  max-width: 455px;
+  max-width: ${({ $stacked }) => ($stacked ? 'none' : '455px')};
   background-color: #d4dce8;
   border-radius: 9999px;
   display: flex;
@@ -171,10 +184,12 @@ const NavIcons = styled.div`
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
-  margin-left: auto;
-  flex: 0 0 auto;
+  justify-self: end;
+  margin-left: ${({ $stacked }) => ($stacked ? 'auto' : 0)};
+  flex: ${({ $stacked }) => ($stacked ? '0 0 auto' : 'initial')};
 
   @media (max-width: 767px) {
+    margin-left: auto;
     gap: 6px;
   }
 `;
@@ -289,7 +304,7 @@ const ScanOutFab = styled.button`
 
 export default function OwnerHeader({
   active,
-  title = 'New Trier Township Food Pantry Inventory',
+  title = 'New Trier Township',
   mobileTitle = 'New Trier Township',
   showSearch = false,
   searchValue = '',
@@ -299,6 +314,10 @@ export default function OwnerHeader({
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showVolunteerModal, setShowVolunteerModal] = useState(false);
+  const [stackSearch, setStackSearch] = useState(false);
+  const topBarRef = useRef(null);
+  const brandRef = useRef(null);
+  const navRef = useRef(null);
   const profileWrapperRef = useRef(null);
 
   useEffect(() => {
@@ -315,12 +334,52 @@ export default function OwnerHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showProfileDropdown]);
 
+  useEffect(() => {
+    if (!showSearch) {
+      setStackSearch(false);
+      return undefined;
+    }
+
+    const updateStacking = () => {
+      const topBar = topBarRef.current;
+      const brand = brandRef.current;
+      const nav = navRef.current;
+      if (!topBar || !brand || !nav) return;
+
+      const styles = window.getComputedStyle(topBar);
+      const paddingX =
+        Number.parseFloat(styles.paddingLeft || '0') +
+        Number.parseFloat(styles.paddingRight || '0');
+      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+      const available = topBar.clientWidth - paddingX;
+      const maxSideWidth = Math.max(brand.scrollWidth, nav.scrollWidth);
+      const comfortableGap = Math.max(gap, DESKTOP_SEARCH_COMFORT_GAP);
+      const required =
+        maxSideWidth * 2 + DESKTOP_SEARCH_COMFORT_WIDTH + comfortableGap * 2;
+
+      setStackSearch(available < required);
+    };
+
+    updateStacking();
+
+    const resizeObserver = new ResizeObserver(updateStacking);
+    [topBarRef.current, brandRef.current, navRef.current].forEach((node) => {
+      if (node) resizeObserver.observe(node);
+    });
+    window.addEventListener('resize', updateStacking);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateStacking);
+    };
+  }, [active, mobileTitle, showSearch, title]);
+
   const go = (path) => () => navigate(path);
 
   return (
     <>
-      <TopBar>
-        <BrandGroup>
+      <TopBar ref={topBarRef} $hasSearch={showSearch} $stacked={stackSearch}>
+        <BrandGroup ref={brandRef} $stacked={stackSearch}>
           <LogoImg
             src={PantryLogo}
             alt='New Trier Township'
@@ -331,8 +390,8 @@ export default function OwnerHeader({
         </BrandGroup>
 
         {showSearch && (
-          <SearchWrapper>
-            <SearchPill>
+          <SearchWrapper $stacked={stackSearch}>
+            <SearchPill $stacked={stackSearch}>
               <SearchInput
                 type='text'
                 placeholder={searchPlaceholder}
@@ -346,7 +405,7 @@ export default function OwnerHeader({
           </SearchWrapper>
         )}
 
-        <NavIcons>
+        <NavIcons ref={navRef} $stacked={stackSearch}>
           <NavIcon
             $active={active === 'inventory'}
             title='Inventory'

@@ -7,7 +7,7 @@ import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
 import { auth } from '@/firebase-config';
 import { volunteerApi } from '@/services/api';
-import { signInAnonymously } from 'firebase/auth';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -151,12 +151,14 @@ export default function VolunteerEntryPage() {
     if (isLoading) return;
     if (role === 'owner') {
       navigate('/inventory', { replace: true });
-    } else if (role === 'volunteer') {
+    } else if (role === 'volunteer' && !isSubmitting) {
       navigate('/scan-in', { replace: true });
     }
-  }, [role, isLoading, navigate]);
+  }, [role, isLoading, isSubmitting, navigate]);
 
-  if (isLoading || role) return null;
+  if (isLoading || role === 'owner' || (role === 'volunteer' && !isSubmitting)) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,39 +175,26 @@ export default function VolunteerEntryPage() {
         return;
       }
 
-      const credential = await signInAnonymously(auth);
-
-      // Register the volunteer with the backend BEFORE navigation proceeds. This
-      // must reliably land first: ScanInPage's loadProfile calls getMyProfile on
-      // mount and a 404 (volunteer row not yet in active_volunteers) would
-      // otherwise flash the "Code No Longer Active" overlay right after a valid
-      // code. We await it (and retry once on a transient failure) so the INSERT
-      // is in flight/committed before the role-change effect routes to /scan-in.
-      // (ScanInPage also retries getMyProfile once on 404 as a safety net.)
-      const registerVolunteer = async () => {
-        const idToken = await credential.user.getIdToken();
-        return fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/volunteer/register`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ name: name.trim(), code: code.trim() }),
-          }
-        );
-      };
+      await signInAnonymously(auth);
 
       try {
-        const res = await registerVolunteer();
-        if (!res.ok) await registerVolunteer();
+        await volunteerApi.register({
+          name: name.trim(),
+          code: code.trim(),
+        });
       } catch {
-        // Best-effort: even if registration ultimately fails the volunteer can
-        // still scan; ScanInPage's 404 retry covers the transient case.
+        try {
+          await signOut(auth);
+        } catch {
+          // Ignore sign-out cleanup errors; the visible registration error is
+          // the actionable state for the volunteer.
+        }
+        setError('Could not join the session, please try again.');
+        setIsSubmitting(false);
+        return;
       }
 
-      // Navigation handled by the role-watching useEffect above.
+      navigate('/scan-in', { replace: true });
     } catch (err) {
       const msg = err.message || '';
       if (
