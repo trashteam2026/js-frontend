@@ -171,16 +171,21 @@ export default function DeleteCategoryModal({ category, onClose, onConfirm }) {
         </Header>
 
         <WarningBox>
-          <FiAlertTriangle size={20} color='#ea580c' style={{ flexShrink: 0, marginTop: 1 }} />
+          <FiAlertTriangle
+            size={20}
+            color='#ea580c'
+            style={{ flexShrink: 0, marginTop: 1 }}
+          />
           <WarningText>
-            Deleting <CategoryNameStrong>{category.name}</CategoryNameStrong> will permanently
-            remove{' '}
+            Deleting <CategoryNameStrong>{category.name}</CategoryNameStrong>{' '}
+            will permanently remove{' '}
             {itemCount === 0
               ? 'all items'
               : itemCount === 1
-              ? '1 item'
-              : `all ${itemCount} items`}{' '}
-            in this category and add them to the activity log. This cannot be undone.
+                ? '1 item'
+                : `all ${itemCount} items`}{' '}
+            in this category and add them to the activity log. This cannot be
+            undone.
           </WarningText>
         </WarningBox>
 

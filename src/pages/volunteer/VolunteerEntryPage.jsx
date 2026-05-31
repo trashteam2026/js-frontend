@@ -3,11 +3,10 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
-import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
 import { auth } from '@/firebase-config';
-import { signInAnonymously } from 'firebase/auth';
 import { volunteerApi } from '@/services/api';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
@@ -139,24 +138,52 @@ const NextButton = styled.button`
   }
 `;
 
+const ErrorText = styled.p`
+  width: 100%;
+  margin: 0;
+  color: red;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  text-align: center;
+`;
+
+// A registration failure happens AFTER anonymous sign-in has flipped the role to
+// "volunteer", so PublicOnlyRoute has already navigated away and unmounted this
+// page; the catch's signOut then bounces a fresh instance back here. A setError
+// on the unmounted instance is lost, so we stash the message at module scope
+// (survives the unmount → remount, which is in-memory, not a page reload) and the
+// remounted page reads it on mount. Cleared on read so it shows exactly once.
+let pendingRegistrationError = '';
+
 export default function VolunteerEntryPage() {
   const navigate = useNavigate();
   const { role, isLoading } = useUser();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+  // Seed from any error carried over from a prior (unmounted) attempt so the
+  // remounted page shows it immediately, without a setState-in-effect flash.
+  const [error, setError] = useState(() => pendingRegistrationError || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
     if (role === 'owner') {
       navigate('/inventory', { replace: true });
-    } else if (role === 'volunteer') {
+    } else if (role === 'volunteer' && !isSubmitting) {
       navigate('/scan-in', { replace: true });
     }
-  }, [role, isLoading, navigate]);
+  }, [role, isLoading, isSubmitting, navigate]);
 
-  if (isLoading || role) return null;
+  // One-shot: clear the carried error after mount so it shows exactly once and
+  // never reappears on a later visit. Done in an effect (not the initializer
+  // above) to keep that initializer a pure read under StrictMode double-invoke.
+  useEffect(() => {
+    pendingRegistrationError = '';
+  }, []);
+
+  if (isLoading || role === 'owner' || (role === 'volunteer' && !isSubmitting)) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,32 +200,37 @@ export default function VolunteerEntryPage() {
         return;
       }
 
-      const credential = await signInAnonymously(auth);
+      await signInAnonymously(auth);
 
-      // Register the volunteer's name with the backend. Best-effort — if this
-      // fails, the volunteer can still scan, they just won't appear in the
-      // owner's volunteer list.
       try {
-        const idToken = await credential.user.getIdToken();
-        await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/volunteer/register`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ name: name.trim(), code: code.trim() }),
-          }
-        );
+        await volunteerApi.register({
+          name: name.trim(),
+          code: code.trim(),
+        });
       } catch {
-        // non-fatal
+        // Anonymous sign-in already flipped the role to "volunteer", so this
+        // page is being unmounted. Stash the error before signing out so the
+        // remounted entry page can surface it (a setError here would be lost),
+        // then signOut bounces back to /volunteer/entry with the message shown.
+        pendingRegistrationError =
+          'Could not join the session, please try again.';
+        try {
+          await signOut(auth);
+        } catch {
+          // Ignore sign-out cleanup errors; the visible registration error is
+          // the actionable state for the volunteer.
+        }
+        setIsSubmitting(false);
+        return;
       }
 
-      // Navigation handled by the role-watching useEffect above.
+      navigate('/scan-in', { replace: true });
     } catch (err) {
       const msg = err.message || '';
-      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('expired')) {
+      if (
+        msg.toLowerCase().includes('invalid') ||
+        msg.toLowerCase().includes('expired')
+      ) {
         setError('Invalid or expired code. Please try again.');
       } else {
         setError('Unable to complete sign-in. Please try again.');
@@ -225,7 +257,7 @@ export default function VolunteerEntryPage() {
       <Divider />
 
       <Form onSubmit={handleSubmit}>
-        {error && <RedSpan>{error}</RedSpan>}
+        {error && <ErrorText>{error}</ErrorText>}
 
         <Label htmlFor='volunteer-name'>Your Name</Label>
         <TextInput

@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiArrowLeft, FiCheck, FiEdit2, FiList, FiTrash2, FiUser, FiX } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiEdit2,
+  FiList,
+  FiTrash2,
+  FiUser,
+  FiX,
+} from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
 import { useUser } from '@/common/contexts/UserContext';
@@ -169,6 +178,16 @@ const SecondaryButton = styled.button`
 
   &:hover {
     background-color: #f0f3f8;
+  }
+`;
+
+const FinishButton = styled(SecondaryButton)`
+  color: #ffffff;
+  background-color: #2a4d8f;
+  border-color: #2a4d8f;
+
+  &:hover {
+    background-color: #1e3a6e;
   }
 `;
 
@@ -475,6 +494,7 @@ const EditError = styled.p`
 `;
 
 export default function ScanInPage() {
+  const navigate = useNavigate();
   const { logout } = useUser();
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
@@ -510,15 +530,49 @@ export default function ScanInPage() {
     };
 
     const loadProfile = async () => {
-      try {
+      const attempt = async () => {
         const profile = await volunteerApi.getMyProfile();
         if (!cancelled) {
           setVolunteerName(profile.name || '');
           setItemsScanned(profile.itemsScanned || 0);
         }
+      };
+
+      try {
+        await attempt();
       } catch (err) {
-        if (!cancelled && (err.code === 'SESSION_ENDED' || err.status === 403)) {
+        // A 403/SESSION_ENDED means this volunteer IS registered but the owner
+        // ended or regenerated the code — that's a definitive dead session, so
+        // show the overlay immediately.
+        if (
+          !cancelled &&
+          (err.code === 'SESSION_ENDED' || err.status === 403)
+        ) {
           setSessionEnded(true);
+          return;
+        }
+
+        // A 404 ("No active volunteer session") can be a transient race: a
+        // volunteer who just entered a valid code may reach /scan-in before their
+        // POST /register has committed. Retry once after a short delay before
+        // declaring the session dead, so a just-registered volunteer isn't bounced
+        // to the "Code No Longer Active" overlay. If it's still 404 (or now 403)
+        // after the retry, the session is genuinely gone.
+        if (err.status === 404) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          if (cancelled) return;
+          try {
+            await attempt();
+          } catch (retryErr) {
+            if (
+              !cancelled &&
+              (retryErr.code === 'SESSION_ENDED' ||
+                retryErr.status === 403 ||
+                retryErr.status === 404)
+            ) {
+              setSessionEnded(true);
+            }
+          }
         }
         // otherwise non-fatal
       }
@@ -533,12 +587,18 @@ export default function ScanInPage() {
   }, []);
 
   // Poll every 60 s so idle volunteers are evicted promptly when session ends.
+  // 404 (owner ended the session / backend restarted) is handled the same as a
+  // regenerated code (403/SESSION_ENDED) — all three mean this code is dead.
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         await volunteerApi.getMyProfile();
       } catch (err) {
-        if (err.code === 'SESSION_ENDED' || err.status === 403) {
+        if (
+          err.code === 'SESSION_ENDED' ||
+          err.status === 403 ||
+          err.status === 404
+        ) {
           setSessionEnded(true);
         }
       }
@@ -674,13 +734,17 @@ export default function ScanInPage() {
     setView('camera');
   };
 
-  const handleBack = async () => {
+  const handleFinish = async () => {
     try {
       await logout();
     } catch (err) {
       console.error('Logout error:', err);
+    } finally {
+      navigate('/', { replace: true });
     }
   };
+
+  const handleBack = handleFinish;
 
   const handleAddManually = () => {
     setPendingBarcode(null);
@@ -802,9 +866,7 @@ export default function ScanInPage() {
         >
           <FiList size={13} />
           {volunteerName}
-          {itemsScanned > 0 && (
-            <ItemsCount>&nbsp;· {itemsScanned}</ItemsCount>
-          )}
+          {itemsScanned > 0 && <ItemsCount>&nbsp;· {itemsScanned}</ItemsCount>}
         </HistoryButton>
       )}
 
@@ -836,6 +898,9 @@ export default function ScanInPage() {
           <SecondaryButton type='button' onClick={handleAddManually}>
             Add Item(s) Manually
           </SecondaryButton>
+          <FinishButton type='button' onClick={handleFinish}>
+            Finish Scanning
+          </FinishButton>
         </SectionWrapper>
       )}
 
@@ -845,6 +910,7 @@ export default function ScanInPage() {
           mode={formMode}
           initialBarcode={pendingBarcode}
           initialCategory={pendingLookup?.categoryName || ''}
+          initialCategoryId={pendingLookup?.categoryId ?? null}
           initialName={pendingLookup?.productName || ''}
           lookupSource={pendingLookup?.source || null}
           categoryOptions={categories}
@@ -857,7 +923,10 @@ export default function ScanInPage() {
         <HistoryPanel>
           <HistoryHeader>
             <HistoryTitle>
-              <FiList size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              <FiList
+                size={15}
+                style={{ marginRight: 6, verticalAlign: 'middle' }}
+              />
               This Session
             </HistoryTitle>
             <CloseButton
@@ -968,12 +1037,13 @@ export default function ScanInPage() {
       {sessionEnded && (
         <SessionEndedOverlay>
           <SessionEndedCard>
-            <SessionEndedTitle>Session Ended</SessionEndedTitle>
+            <SessionEndedTitle>Code No Longer Active</SessionEndedTitle>
             <SessionEndedBody>
-              The volunteer session has ended. Thank you for your help today!
+              This volunteer code is no longer active or has expired. You can
+              leave this screen now.
             </SessionEndedBody>
-            <SessionEndedButton type='button' onClick={handleBack}>
-              Sign Out
+            <SessionEndedButton type='button' onClick={handleFinish}>
+              Leave
             </SessionEndedButton>
           </SessionEndedCard>
         </SessionEndedOverlay>

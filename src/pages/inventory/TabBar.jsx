@@ -215,6 +215,7 @@ export default function TabBar({
         setOpenDropdown(openDropdown === 'food' ? null : 'food');
       } else {
         onTabChange('food');
+        onCategorySelect(null);
         setOpenDropdown(null);
       }
     } else if (tab === 'non_food') {
@@ -222,6 +223,7 @@ export default function TabBar({
         setOpenDropdown(openDropdown === 'non_food' ? null : 'non_food');
       } else {
         onTabChange('non_food');
+        onCategorySelect(null);
         setOpenDropdown(null);
       }
     }
@@ -308,7 +310,8 @@ export default function TabBar({
           <FiPlus size={26} color='#ffffff' />
         </AddButton>
         <FilterAllButton onClick={onFilterAll} aria-label='Filter All'>
-          <FilterAllLabel>Filter All</FilterAllLabel> <FiFilter size={24} strokeWidth={2.2} />
+          <FilterAllLabel>Filter All</FilterAllLabel>{' '}
+          <FiFilter size={24} strokeWidth={2.2} />
         </FilterAllButton>
       </RightSection>
     </TabContainer>

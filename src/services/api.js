@@ -53,26 +53,27 @@ async function authedRequest(method, path, body) {
 }
 
 export const itemsApi = {
-  getAll: () => request('GET', '/items'),
-  getById: (id) => request('GET', `/items/${id}`),
-  create: (data) => request('POST', '/items', data),
-  update: (id, data) => request('PUT', `/items/${id}`, data),
-  delete: (id) => request('DELETE', `/items/${id}`),
+  getAll: () => authedRequest('GET', '/items'),
+  getById: (id) => authedRequest('GET', `/items/${id}`),
+  create: (data) => authedRequest('POST', '/items', data),
+  update: (id, data) => authedRequest('PUT', `/items/${id}`, data),
+  delete: (id) => authedRequest('DELETE', `/items/${id}`),
 };
 
 export const batchesApi = {
-  create: (itemId, data) => request('POST', `/items/${itemId}/batches`, data),
+  create: (itemId, data) =>
+    authedRequest('POST', `/items/${itemId}/batches`, data),
   update: (itemId, batchId, data) =>
-    request('PUT', `/items/${itemId}/batches/${batchId}`, data),
+    authedRequest('PUT', `/items/${itemId}/batches/${batchId}`, data),
   delete: (itemId, batchId) =>
-    request('DELETE', `/items/${itemId}/batches/${batchId}`),
+    authedRequest('DELETE', `/items/${itemId}/batches/${batchId}`),
 };
 
 export const categoriesApi = {
-  getAll: () => request('GET', '/categories'),
-  create: (data) => request('POST', '/categories', data),
-  update: (id, data) => request('PUT', `/categories/${id}`, data),
-  delete: (id) => request('DELETE', `/categories/${id}`),
+  getAll: () => authedRequest('GET', '/categories'),
+  create: (data) => authedRequest('POST', '/categories', data),
+  update: (id, data) => authedRequest('PUT', `/categories/${id}`, data),
+  delete: (id) => authedRequest('DELETE', `/categories/${id}`),
 };
 
 export const activityApi = {
@@ -81,9 +82,10 @@ export const activityApi = {
     if (start) params.set('start', start);
     if (end) params.set('end', end);
     const qs = params.toString();
-    return request('GET', `/activity${qs ? `?${qs}` : ''}`);
+    return authedRequest('GET', `/activity${qs ? `?${qs}` : ''}`);
   },
-  updateLog: (id, quantity) => authedRequest('PATCH', `/activity/${id}`, { quantity }),
+  updateLog: (id, quantity) =>
+    authedRequest('PATCH', `/activity/${id}`, { quantity }),
   deleteLog: (id) => authedRequest('DELETE', `/activity/${id}`),
 };
 
@@ -117,6 +119,7 @@ export const volunteerApi = {
   register: ({ name, code }) =>
     authedRequest('POST', '/api/volunteer/register', { name, code }),
   getMyProfile: () => authedRequest('GET', '/api/volunteer/me'),
+  finishVolunteering: () => authedRequest('DELETE', '/api/volunteer/me'),
 
   // Owner volunteer management
   getActiveVolunteers: () => authedRequest('GET', '/api/volunteer/volunteers'),

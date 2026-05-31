@@ -1,9 +1,29 @@
 import { useEffect, useState } from 'react';
 import { FiCheck, FiCopy, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
 import { volunteerApi } from '../../services/api';
+
+const PANTRY_TZ = 'America/Chicago';
+
+const expiryDateFormat = new Intl.DateTimeFormat([], {
+  timeZone: PANTRY_TZ,
+  month: 'short',
+  day: 'numeric',
+});
+
+const expiryTimeFormat = new Intl.DateTimeFormat([], {
+  timeZone: PANTRY_TZ,
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+const formatSessionExpiry = (iso) => {
+  const date = new Date(iso);
+  return `${expiryDateFormat.format(date)} at ${expiryTimeFormat.format(date)}`;
+};
 
 const Backdrop = styled.div`
   position: fixed;
@@ -16,15 +36,22 @@ const Backdrop = styled.div`
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 12px;
   padding: 28px 24px 24px;
-  width: 100%;
-  max-width: 340px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: relative;
+
+  @media (max-width: 767px) {
+    padding: 24px 18px 20px;
+    gap: 14px;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -69,6 +96,7 @@ const CodeBox = styled.div`
   align-items: center;
   justify-content: center;
   gap: 10px;
+  min-width: 0;
 `;
 
 const CodeText = styled.span`
@@ -77,6 +105,13 @@ const CodeText = styled.span`
   letter-spacing: 6px;
   color: #1a2b4a;
   font-family: monospace;
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 767px) {
+    font-size: 1.6rem;
+    letter-spacing: 4px;
+  }
 `;
 
 const CopyButton = styled.button`
@@ -96,6 +131,7 @@ const CopyButton = styled.button`
 `;
 
 const PrimaryButton = styled.button`
+  box-sizing: border-box;
   width: 100%;
   padding: 10px;
   background: #2c5e95;
@@ -141,7 +177,7 @@ const ErrorText = styled.p`
   text-align: center;
 `;
 
-export default function VolunteerCodeModal({ onClose }) {
+export default function VolunteerCodeModal({ onClose, onSessionChange }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -162,6 +198,9 @@ export default function VolunteerCodeModal({ onClose }) {
     try {
       const result = await volunteerApi.generateSession();
       setSession(result);
+      // Notify the host page (e.g. /volunteers) so its session-scoped panels
+      // re-fetch — generating or regenerating a code changes who's active.
+      onSessionChange?.();
     } catch {
       setError('Failed to generate code.');
     } finally {
@@ -175,6 +214,8 @@ export default function VolunteerCodeModal({ onClose }) {
     try {
       await volunteerApi.endSession();
       setSession({ active: false, code: null });
+      // Ending the session evicts active volunteers — let the host page refresh.
+      onSessionChange?.();
     } catch {
       setError('Failed to end session.');
     } finally {
@@ -208,8 +249,8 @@ export default function VolunteerCodeModal({ onClose }) {
         {!loading && !session?.active && (
           <>
             <StatusText>
-              Generate a one-time code to give volunteers access to the
-              check-in scanner.
+              Generate a one-time code to give volunteers access to the check-in
+              scanner.
             </StatusText>
             <PrimaryButton onClick={handleGenerate} disabled={actionLoading}>
               {actionLoading ? 'Generating…' : 'Generate Code'}
@@ -222,13 +263,11 @@ export default function VolunteerCodeModal({ onClose }) {
             <StatusText>
               Share this code with volunteers.
               {session.expiresAt && (
-                <> Expires at{' '}
-                  <strong>
-                    {new Date(session.expiresAt).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </strong>.
+                <>
+                  {' '}
+                  Expires{' '}
+                  <strong>{formatSessionExpiry(session.expiresAt)}</strong>
+                  .
                 </>
               )}
             </StatusText>
@@ -258,4 +297,5 @@ export default function VolunteerCodeModal({ onClose }) {
 
 VolunteerCodeModal.propTypes = {
   onClose: PropTypes.func.isRequired,
+  onSessionChange: PropTypes.func,
 };

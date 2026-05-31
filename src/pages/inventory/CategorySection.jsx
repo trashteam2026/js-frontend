@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  FiCheck,
   FiEdit2,
   FiFilter,
   FiMinusCircle,
   FiMoreVertical,
   FiPlus,
   FiPlusCircle,
+  FiX,
 } from 'react-icons/fi';
 
+import useIsMobile from '@/common/hooks/useIsMobile';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-
-import useIsMobile from '@/common/hooks/useIsMobile';
 
 import { itemsApi } from '../../services/api';
 import ItemRow from './ItemRow';
@@ -27,7 +29,9 @@ const Wrapper = styled.div`
 
 const Header = styled.div`
   display: grid;
-  grid-template-columns: 1fr 92px 108px 44px;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(76px, 92px) minmax(88px, 108px)
+    44px;
   align-items: center;
   min-height: 36px;
   background-color: #2c5e95;
@@ -49,6 +53,10 @@ const CategoryName = styled.span`
   font-weight: 600;
   color: #ffffff;
   padding: 0 10px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const ActionCell = styled.button`
@@ -63,10 +71,13 @@ const ActionCell = styled.button`
   font-weight: 600;
   cursor: pointer;
   min-height: 36px;
+  min-width: 0;
   border-left: 1px solid #c5d4e8;
+  white-space: nowrap;
 
   svg {
     color: #ffffff;
+    flex-shrink: 0;
   }
 
   @media (max-width: 767px) {
@@ -74,10 +85,22 @@ const ActionCell = styled.button`
   }
 `;
 
+// Occupies the Edit column's grid track when the header is read-only, so the
+// remaining cells stay aligned with the fixed grid-template-columns.
+const HeaderSpacer = styled.div`
+  min-height: 36px;
+  min-width: 0;
+  border-left: 1px solid #c5d4e8;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
 const FilterCell = styled.div`
-  position: relative;
   display: grid;
   min-height: 36px;
+  min-width: 0;
   border-left: 1px solid #c5d4e8;
 
   @media (max-width: 767px) {
@@ -99,22 +122,31 @@ const FilterTrigger = styled.button`
   min-height: 36px;
   width: 100%;
   padding: 0;
+  min-width: 0;
+  white-space: nowrap;
 
   svg {
     color: #ffffff;
+    flex-shrink: 0;
   }
+`;
+
+const PopoverOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 70;
 `;
 
 const FilterPopover = styled.div`
   position: fixed;
   top: ${({ $top }) => $top}px;
-  right: ${({ $right }) => $right}px;
+  left: ${({ $left }) => $left}px;
   background: #ffffff;
   border: 1px solid #c7d2e3;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
-  min-width: 200px;
-  z-index: 51;
+  width: 220px;
+  max-width: calc(100vw - 16px);
   overflow: hidden;
 `;
 
@@ -135,6 +167,110 @@ const FilterOption = styled.button`
   }
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+`;
+
+const SortModal = styled.div`
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 24px 28px;
+  width: min(360px, calc(100vw - 24px));
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2b4a;
+  margin: 0;
+`;
+
+const ModalCloseButton = styled.button`
+  background: #2a4d8f;
+  border: none;
+  color: #ffffff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: #1e3a6e;
+  }
+
+  svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    fill: none;
+  }
+
+  svg path,
+  svg circle,
+  svg line,
+  svg polyline {
+    stroke: #ffffff;
+  }
+
+  @media (max-width: 767px) {
+    width: 44px;
+    height: 44px;
+  }
+`;
+
+const SortOptionList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const SortOptionButton = styled.button`
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid ${({ $active }) => ($active ? '#2a4d8f' : '#d6dce8')};
+  border-radius: 6px;
+  background: ${({ $active }) => ($active ? '#eef3fa' : '#ffffff')};
+  color: #1a2b4a;
+  font-size: 14px;
+  font-weight: ${({ $active }) => ($active ? '700' : '600')};
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #eef3fa;
+  }
+
+  svg {
+    color: #2a4d8f;
+    flex-shrink: 0;
+  }
+`;
+
 const CollapseButton = styled.button`
   background: none;
   border: none;
@@ -146,6 +282,7 @@ const CollapseButton = styled.button`
   display: grid;
   place-items: center;
   border-left: 1px solid #c5d4e8;
+  min-width: 0;
 
   svg {
     color: #ffffff;
@@ -172,6 +309,7 @@ const KebabButton = styled.button`
   width: 100%;
   height: 100%;
   min-height: 36px;
+  min-width: 0;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -187,15 +325,15 @@ const KebabButton = styled.button`
 `;
 
 const KebabPopover = styled.div`
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
+  top: ${({ $top }) => $top}px;
+  left: ${({ $left }) => $left}px;
   background: #ffffff;
   border: 1px solid #c7d2e3;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(24, 39, 75, 0.16);
-  min-width: 140px;
-  z-index: 10;
+  width: 140px;
+  max-width: calc(100vw - 16px);
   overflow: hidden;
 `;
 
@@ -253,7 +391,9 @@ const AddItemButton = styled.button`
   padding: 8px 12px;
   cursor: pointer;
   font-weight: 500;
-  &:hover { background: #eef3fa; }
+  &:hover {
+    background: #eef3fa;
+  }
 `;
 
 const AddItemInput = styled.input`
@@ -265,7 +405,9 @@ const AddItemInput = styled.input`
   color: #1a2b4a;
   padding: 8px 12px;
   outline: none;
-  &::placeholder { color: #9ba8bc; }
+  &::placeholder {
+    color: #9ba8bc;
+  }
 
   @media (max-width: 767px) {
     font-size: 16px;
@@ -280,8 +422,13 @@ const AddItemSave = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  &:hover { background: #eef3fa; }
-  &:disabled { color: #9ba8bc; cursor: default; }
+  &:hover {
+    background: #eef3fa;
+  }
+  &:disabled {
+    color: #9ba8bc;
+    cursor: default;
+  }
 
   @media (max-width: 767px) {
     min-width: 44px;
@@ -296,7 +443,9 @@ const AddItemCancel = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  &:hover { background: #f0f3f8; }
+  &:hover {
+    background: #f0f3f8;
+  }
 
   @media (max-width: 767px) {
     min-width: 44px;
@@ -311,6 +460,7 @@ export default function CategorySection({
   onItemClick,
   onItemAdded,
   onEditCategory,
+  readOnly = false,
 }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
@@ -319,49 +469,68 @@ export default function CategorySection({
   const [saving, setSaving] = useState(false);
   const [kebabOpen, setKebabOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
+  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const inputRef = useRef(null);
-  const kebabRef = useRef(null);
-  const filterRef = useRef(null);
+
+  const positionSortMenu = (anchorEl) => {
+    if (!anchorEl) return;
+    const rect = anchorEl.getBoundingClientRect();
+    const menuWidth = Math.min(220, window.innerWidth - 16);
+    const menuHeight = 176;
+    const left = Math.min(
+      Math.max(8, rect.right - menuWidth),
+      window.innerWidth - menuWidth - 8
+    );
+    const top =
+      rect.bottom + 4 + menuHeight > window.innerHeight
+        ? Math.max(8, rect.top - menuHeight - 4)
+        : rect.bottom + 4;
+    setPopoverPos({ top, left });
+  };
+
+  const positionKebabMenu = (anchorEl) => {
+    if (!anchorEl) return;
+    const rect = anchorEl.getBoundingClientRect();
+    const menuWidth = Math.min(140, window.innerWidth - 16);
+    const menuHeight = 88;
+    const left = Math.min(
+      Math.max(8, rect.right - menuWidth),
+      window.innerWidth - menuWidth - 8
+    );
+    const top =
+      rect.bottom + 4 + menuHeight > window.innerHeight
+        ? Math.max(8, rect.top - menuHeight - 4)
+        : rect.bottom + 4;
+    setKebabPos({ top, left });
+  };
 
   useEffect(() => {
-    if (!kebabOpen) return undefined;
-    const handleClickOutside = (e) => {
-      if (kebabRef.current && !kebabRef.current.contains(e.target)) {
+    if (!sortOpen && !sortModalOpen && !kebabOpen) return undefined;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') {
+        setSortOpen(false);
+        setSortModalOpen(false);
         setKebabOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [kebabOpen]);
-
-  useEffect(() => {
-    if (!sortOpen) return undefined;
-    const handleClickOutside = (e) => {
-      if (filterRef.current && !filterRef.current.contains(e.target)) {
-        setSortOpen(false);
-      }
-    };
-    const handleKey = (e) => {
-      if (e.key === 'Escape') setSortOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [sortOpen]);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [sortOpen, sortModalOpen, kebabOpen]);
 
-  const toggleSortMenu = () => {
-    if (!sortOpen && filterRef.current) {
-      const rect = filterRef.current.getBoundingClientRect();
-      setPopoverPos({
-        top: rect.bottom + 4,
-        right: Math.max(8, window.innerWidth - rect.right),
-      });
+  const toggleSortMenu = (anchorEl) => {
+    if (!sortOpen) {
+      positionSortMenu(anchorEl);
     }
     setSortOpen((o) => !o);
+  };
+
+  const toggleKebabMenu = (anchorEl) => {
+    if (!kebabOpen) {
+      positionKebabMenu(anchorEl);
+    }
+    setKebabOpen((o) => !o);
   };
 
   const startAdding = () => {
@@ -401,22 +570,85 @@ export default function CategorySection({
     <Wrapper>
       <Header>
         <CategoryName>{category.name}</CategoryName>
-        <ActionCell type='button' onClick={() => onEditCategory?.(category)}>
-          <span>Edit</span>
-          <FiEdit2 size={15} />
-        </ActionCell>
-        <FilterCell ref={filterRef}>
+        {readOnly ? (
+          <HeaderSpacer />
+        ) : (
+          <ActionCell type='button' onClick={() => onEditCategory?.(category)}>
+            <span>Edit</span>
+            <FiEdit2 size={15} />
+          </ActionCell>
+        )}
+        <FilterCell>
           <FilterTrigger
             type='button'
-            onClick={toggleSortMenu}
+            onClick={(e) => toggleSortMenu(e.currentTarget)}
             aria-haspopup='menu'
             aria-expanded={sortOpen}
           >
             <span>Filter</span>
             <FiFilter size={17} />
           </FilterTrigger>
-          {sortOpen && (
-            <FilterPopover role='menu' $top={popoverPos.top} $right={popoverPos.right}>
+        </FilterCell>
+        {isMobile && (
+          <KebabCell>
+            <KebabButton
+              type='button'
+              onClick={(e) => toggleKebabMenu(e.currentTarget)}
+              aria-label='Category actions'
+            >
+              <FiMoreVertical size={18} />
+            </KebabButton>
+          </KebabCell>
+        )}
+        <CollapseButton type='button' onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <FiMinusCircle size={19} /> : <FiPlusCircle size={19} />}
+        </CollapseButton>
+      </Header>
+      {isMobile &&
+        kebabOpen &&
+        createPortal(
+          <PopoverOverlay onClick={() => setKebabOpen(false)}>
+            <KebabPopover
+              $top={kebabPos.top}
+              $left={kebabPos.left}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {!readOnly && (
+                <KebabItem
+                  type='button'
+                  onClick={() => {
+                    setKebabOpen(false);
+                    onEditCategory?.(category);
+                  }}
+                >
+                  <FiEdit2 size={14} />
+                  Edit
+                </KebabItem>
+              )}
+              <KebabItem
+                type='button'
+                onClick={() => {
+                  setSortModalOpen(true);
+                  setKebabOpen(false);
+                }}
+              >
+                <FiFilter size={14} />
+                Filter
+              </KebabItem>
+            </KebabPopover>
+          </PopoverOverlay>,
+          document.body
+        )}
+      {sortOpen &&
+        !isMobile &&
+        createPortal(
+          <PopoverOverlay onClick={() => setSortOpen(false)}>
+            <FilterPopover
+              role='menu'
+              $top={popoverPos.top}
+              $left={popoverPos.left}
+              onClick={(e) => e.stopPropagation()}
+            >
               {SORT_OPTIONS.map((opt) => (
                 <FilterOption
                   key={opt.value}
@@ -433,44 +665,43 @@ export default function CategorySection({
                 </FilterOption>
               ))}
             </FilterPopover>
-          )}
-        </FilterCell>
-        {isMobile && (
-          <KebabCell ref={kebabRef}>
-            <KebabButton
-              type='button'
-              onClick={() => setKebabOpen((o) => !o)}
-              aria-label='Category actions'
-            >
-              <FiMoreVertical size={18} />
-            </KebabButton>
-            {kebabOpen && (
-              <KebabPopover>
-                <KebabItem
-                  type='button'
-                  onClick={() => {
-                    setKebabOpen(false);
-                    onEditCategory?.(category);
-                  }}
-                >
-                  <FiEdit2 size={14} />
-                  Edit
-                </KebabItem>
-                <KebabItem
-                  type='button'
-                  onClick={() => setKebabOpen(false)}
-                >
-                  <FiFilter size={14} />
-                  Filter
-                </KebabItem>
-              </KebabPopover>
-            )}
-          </KebabCell>
+          </PopoverOverlay>,
+          document.body
         )}
-        <CollapseButton type='button' onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <FiMinusCircle size={19} /> : <FiPlusCircle size={19} />}
-        </CollapseButton>
-      </Header>
+      {isMobile &&
+        sortModalOpen &&
+        createPortal(
+          <ModalOverlay onClick={() => setSortModalOpen(false)}>
+            <SortModal onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <ModalTitle>Sort Items</ModalTitle>
+                <ModalCloseButton
+                  type='button'
+                  onClick={() => setSortModalOpen(false)}
+                >
+                  <FiX color='#ffffff' />
+                </ModalCloseButton>
+              </ModalHeader>
+              <SortOptionList>
+                {SORT_OPTIONS.map((opt) => (
+                  <SortOptionButton
+                    key={opt.value}
+                    type='button'
+                    $active={sortBy === opt.value}
+                    onClick={() => {
+                      onSortChange?.(opt.value);
+                      setSortModalOpen(false);
+                    }}
+                  >
+                    {opt.label}
+                    {sortBy === opt.value && <FiCheck size={16} />}
+                  </SortOptionButton>
+                ))}
+              </SortOptionList>
+            </SortModal>
+          </ModalOverlay>,
+          document.body
+        )}
 
       <ItemList $isOpen={isOpen}>
         {category.items.length === 0 && !addingItem ? (
@@ -486,31 +717,35 @@ export default function CategorySection({
           ))
         )}
 
-        {addingItem ? (
-          <AddItemRow>
-            <AddItemInput
-              ref={inputRef}
-              placeholder='Item name…'
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') cancelAdding();
-              }}
-            />
-            <AddItemSave onClick={handleSave} disabled={!newItemName.trim() || saving}>
-              Add
-            </AddItemSave>
-            <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
-          </AddItemRow>
-        ) : (
-          <AddItemRow>
-            <AddItemButton type='button' onClick={startAdding}>
-              <FiPlus size={14} />
-              Add Item
-            </AddItemButton>
-          </AddItemRow>
-        )}
+        {!readOnly &&
+          (addingItem ? (
+            <AddItemRow>
+              <AddItemInput
+                ref={inputRef}
+                placeholder='Item name…'
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSave();
+                  if (e.key === 'Escape') cancelAdding();
+                }}
+              />
+              <AddItemSave
+                onClick={handleSave}
+                disabled={!newItemName.trim() || saving}
+              >
+                Add
+              </AddItemSave>
+              <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
+            </AddItemRow>
+          ) : (
+            <AddItemRow>
+              <AddItemButton type='button' onClick={startAdding}>
+                <FiPlus size={14} />
+                Add Item
+              </AddItemButton>
+            </AddItemRow>
+          ))}
       </ItemList>
     </Wrapper>
   );
@@ -518,7 +753,9 @@ export default function CategorySection({
 
 CategorySection.propTypes = {
   category: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    // Real categories have numeric SERIAL ids; the synthetic Uncategorized
+    // fallback group uses a string id.
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
     name: PropTypes.string.isRequired,
     items: PropTypes.array.isRequired,
   }).isRequired,
@@ -527,4 +764,5 @@ CategorySection.propTypes = {
   onItemClick: PropTypes.func,
   onItemAdded: PropTypes.func,
   onEditCategory: PropTypes.func,
+  readOnly: PropTypes.bool,
 };

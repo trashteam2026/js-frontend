@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiCheck, FiEdit2, FiPlus, FiPrinter, FiTrash2, FiX } from 'react-icons/fi';
+import {
+  FiCheck,
+  FiEdit2,
+  FiPlus,
+  FiPrinter,
+  FiTrash2,
+  FiX,
+} from 'react-icons/fi';
 
 import PrintQuantityModal from '@/common/components/PrintQuantityModal';
 import useIsMobile from '@/common/hooks/useIsMobile';
@@ -54,7 +61,10 @@ const CloseButton = styled.button`
   align-items: center;
   padding: 4px;
   border-radius: 4px;
-  &:hover { color: #1a2b4a; background-color: #f0f3f8; }
+  &:hover {
+    color: #1a2b4a;
+    background-color: #f0f3f8;
+  }
 
   @media (max-width: 767px) {
     min-width: 44px;
@@ -124,7 +134,9 @@ const EditIcon = styled.button`
   display: flex;
   align-items: center;
   padding: 2px;
-  &:hover { color: #1a2b4a; }
+  &:hover {
+    color: #1a2b4a;
+  }
 `;
 
 const InlineInput = styled.input`
@@ -135,7 +147,9 @@ const InlineInput = styled.input`
   border-radius: 4px;
   outline: none;
   color: #1a2b4a;
-  &::-webkit-inner-spin-button { opacity: 1; }
+  &::-webkit-inner-spin-button {
+    opacity: 1;
+  }
 
   @media (max-width: 767px) {
     font-size: 16px;
@@ -238,7 +252,9 @@ const CellInput = styled.input`
   text-align: center;
   color: #1a2b4a;
   font-weight: 500;
-  &::-webkit-inner-spin-button { opacity: 1; }
+  &::-webkit-inner-spin-button {
+    opacity: 1;
+  }
 
   @media (max-width: 767px) {
     font-size: 16px;
@@ -321,7 +337,10 @@ const BatchQtyCell = styled.span`
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid transparent;
-  &:hover { border-color: #2c5e95; background: #eef3fa; }
+  &:hover {
+    border-color: #2c5e95;
+    background: #eef3fa;
+  }
 `;
 
 const BatchQtyInput = styled.input`
@@ -332,7 +351,9 @@ const BatchQtyInput = styled.input`
   border-radius: 3px;
   outline: none;
   color: #1a2b4a;
-  &::-webkit-inner-spin-button { opacity: 1; }
+  &::-webkit-inner-spin-button {
+    opacity: 1;
+  }
 
   @media (max-width: 767px) {
     font-size: 16px;
@@ -349,7 +370,9 @@ const DeleteBatchButton = styled.button`
   align-items: center;
   padding: 2px 4px;
   border-radius: 3px;
-  &:hover { background: #fdf2f2; }
+  &:hover {
+    background: #fdf2f2;
+  }
 `;
 
 const AddBatchButton = styled.button`
@@ -364,7 +387,9 @@ const AddBatchButton = styled.button`
   padding: 4px 10px;
   cursor: pointer;
   margin-top: 6px;
-  &:hover { background: #eef3fa; }
+  &:hover {
+    background: #eef3fa;
+  }
 `;
 
 const Divider = styled.hr`
@@ -386,7 +411,10 @@ const DeleteItemButton = styled.button`
   padding: 6px 14px;
   cursor: pointer;
   margin-top: 4px;
-  &:hover { background: #fdf2f2; border-color: #c0392b; }
+  &:hover {
+    background: #fdf2f2;
+    border-color: #c0392b;
+  }
 `;
 
 const PrintButton = styled.button`
@@ -432,8 +460,18 @@ const StatusText = styled.p`
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const MONTH_NAMES_SHORT = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 export default function ItemDetailModal({
@@ -562,17 +600,31 @@ export default function ItemDetailModal({
     const { year, month } = editingCell;
     const newQty = Math.max(0, parseInt(cellInput, 10) || 0);
 
+    const monthBatches = (detail.batches || []).filter((b) => {
+      if (!b.expiration_date) return false;
+      const dateStr = String(b.expiration_date).slice(0, 10);
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+
+    // Editing a month that holds batches with different expiration days will
+    // merge them into a single batch — warn before doing so.
+    const distinctDays = new Set(
+      monthBatches.map((b) => String(b.expiration_date).slice(0, 10))
+    );
+    if (newQty > 0 && distinctDays.size > 1) {
+      const proceed = window.confirm(
+        'This month has multiple batches with different expiration days. ' +
+          'Saving will combine them into a single batch. Continue?'
+      );
+      if (!proceed) return;
+    }
+
     setEditingCell(null);
     setSaving(true);
 
     try {
       const targetDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const monthBatches = (detail.batches || []).filter((b) => {
-        if (!b.expiration_date) return false;
-        const dateStr = String(b.expiration_date).slice(0, 10);
-        const d = new Date(dateStr + 'T00:00:00');
-        return d.getFullYear() === year && d.getMonth() + 1 === month;
-      });
 
       if (monthBatches.length === 0) {
         if (newQty > 0) {
@@ -580,6 +632,12 @@ export default function ItemDetailModal({
             expiration_date: targetDate,
             quantity: newQty,
           });
+        }
+      } else if (newQty === 0) {
+        // Setting the cell to 0 removes the batch(es) rather than leaving an
+        // un-deletable zero-quantity row in the grid.
+        for (const b of monthBatches) {
+          await batchesApi.delete(itemId, b.id);
         }
       } else {
         // Update the first batch; delete extras if any
@@ -607,7 +665,9 @@ export default function ItemDetailModal({
 
     setSaving(true);
     try {
-      const updated = await itemsApi.update(itemId, { low_stock_threshold: val });
+      const updated = await itemsApi.update(itemId, {
+        low_stock_threshold: val,
+      });
       onItemUpdated?.(updated);
       await fetchDetail();
     } catch (err) {
@@ -728,17 +788,20 @@ export default function ItemDetailModal({
     }
   }, [detail, itemId, onItemDeleted, onClose]);
 
-  const handlePrintBarcodes = useCallback((copies) => {
-    if (!detail?.barcodes?.length) return;
+  const handlePrintBarcodes = useCallback(
+    (copies) => {
+      if (!detail?.barcodes?.length) return;
 
-    openBarcodePrintWindow({
-      itemName: detail.name,
-      categoryName: detail.category_name,
-      barcodes: detail.barcodes,
-      copies,
-    });
-    setShowPrintOptions(false);
-  }, [detail]);
+      openBarcodePrintWindow({
+        itemName: detail.name,
+        categoryName: detail.category_name,
+        barcodes: detail.barcodes,
+        copies,
+      });
+      setShowPrintOptions(false);
+    },
+    [detail]
+  );
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -746,7 +809,9 @@ export default function ItemDetailModal({
     return (
       <Overlay onClick={onClose}>
         <Modal onClick={(e) => e.stopPropagation()}>
-          <CloseButton onClick={onClose}><FiX /></CloseButton>
+          <CloseButton onClick={onClose}>
+            <FiX />
+          </CloseButton>
           <StatusText>Loading…</StatusText>
         </Modal>
       </Overlay>
@@ -757,8 +822,12 @@ export default function ItemDetailModal({
     return (
       <Overlay onClick={onClose}>
         <Modal onClick={(e) => e.stopPropagation()}>
-          <CloseButton onClick={onClose}><FiX /></CloseButton>
-          <StatusText style={{ color: '#c0392b' }}>{error || 'Item not found'}</StatusText>
+          <CloseButton onClick={onClose}>
+            <FiX />
+          </CloseButton>
+          <StatusText style={{ color: '#c0392b' }}>
+            {error || 'Item not found'}
+          </StatusText>
         </Modal>
       </Overlay>
     );
@@ -834,7 +903,6 @@ export default function ItemDetailModal({
                   if (e.key === 'Escape') cancelCategoryEdit();
                 }}
               >
-                <option value=''>Uncategorized</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -930,78 +998,81 @@ export default function ItemDetailModal({
             </HintText>
           </ExpirationHeader>
 
-          {isMobile ? (() => {
-            const hasAnyQty = gridData.years.some((y) =>
-              gridData.months.some((m) => (gridData.yearMap[y]?.[m] || 0) > 0)
-            );
-            if (omitZeros && !hasAnyQty) {
-              return <StatusText>No dated batches.</StatusText>;
-            }
-            return (
-              <MobileBatchList>
-                {gridData.years.map((year) => {
-                  const cells = gridData.months
-                    .map((month) => ({
-                      month,
-                      val: gridData.yearMap[year]?.[month] || 0,
-                    }))
-                    .filter(({ month, val }) =>
-                      omitZeros
-                        ? val > 0 ||
-                          (editingCell?.year === year &&
-                            editingCell?.month === month)
-                        : true
+          {isMobile ? (
+            (() => {
+              const hasAnyQty = gridData.years.some((y) =>
+                gridData.months.some((m) => (gridData.yearMap[y]?.[m] || 0) > 0)
+              );
+              if (omitZeros && !hasAnyQty) {
+                return <StatusText>No dated batches.</StatusText>;
+              }
+              return (
+                <MobileBatchList>
+                  {gridData.years.map((year) => {
+                    const cells = gridData.months
+                      .map((month) => ({
+                        month,
+                        val: gridData.yearMap[year]?.[month] || 0,
+                      }))
+                      .filter(({ month, val }) =>
+                        omitZeros
+                          ? val > 0 ||
+                            (editingCell?.year === year &&
+                              editingCell?.month === month)
+                          : true
+                      );
+                    if (cells.length === 0) return null;
+                    return (
+                      <YearSection key={year}>
+                        <YearHeader>{year}</YearHeader>
+                        {cells.map(({ month, val }) => {
+                          const isEditing =
+                            editingCell?.year === year &&
+                            editingCell?.month === month;
+                          return (
+                            <DatedBatchRow
+                              key={month}
+                              onClick={() => {
+                                if (isEditing) return;
+                                setEditingCell({ year, month });
+                                setCellInput(String(val));
+                              }}
+                            >
+                              <BatchDateLabel>
+                                {MONTH_NAMES_SHORT[month - 1]} 1
+                              </BatchDateLabel>
+                              {isEditing ? (
+                                <BatchQtyInput
+                                  ref={cellInputRef}
+                                  type='number'
+                                  min='0'
+                                  style={{ marginLeft: 'auto' }}
+                                  value={cellInput}
+                                  onChange={(e) => setCellInput(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onBlur={saveCellEdit}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveCellEdit();
+                                    if (e.key === 'Escape')
+                                      setEditingCell(null);
+                                  }}
+                                />
+                              ) : (
+                                <>
+                                  <BatchQtyDisplay>{val}</BatchQtyDisplay>
+                                  <FiEdit2 size={14} color='#6b7b95' />
+                                </>
+                              )}
+                            </DatedBatchRow>
+                          );
+                        })}
+                      </YearSection>
                     );
-                  if (cells.length === 0) return null;
-                  return (
-                    <YearSection key={year}>
-                      <YearHeader>{year}</YearHeader>
-                      {cells.map(({ month, val }) => {
-                        const isEditing =
-                          editingCell?.year === year &&
-                          editingCell?.month === month;
-                        return (
-                          <DatedBatchRow
-                            key={month}
-                            onClick={() => {
-                              if (isEditing) return;
-                              setEditingCell({ year, month });
-                              setCellInput(String(val));
-                            }}
-                          >
-                            <BatchDateLabel>
-                              {MONTH_NAMES_SHORT[month - 1]} 1
-                            </BatchDateLabel>
-                            {isEditing ? (
-                              <BatchQtyInput
-                                ref={cellInputRef}
-                                type='number'
-                                min='0'
-                                style={{ marginLeft: 'auto' }}
-                                value={cellInput}
-                                onChange={(e) => setCellInput(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                onBlur={saveCellEdit}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveCellEdit();
-                                  if (e.key === 'Escape') setEditingCell(null);
-                                }}
-                              />
-                            ) : (
-                              <>
-                                <BatchQtyDisplay>{val}</BatchQtyDisplay>
-                                <FiEdit2 size={14} color='#6b7b95' />
-                              </>
-                            )}
-                          </DatedBatchRow>
-                        );
-                      })}
-                    </YearSection>
-                  );
-                })}
-              </MobileBatchList>
-            );
-          })() : (
+                  })}
+                </MobileBatchList>
+              );
+            })()
+          ) : (
             <GridWrapper>
               <Grid>
                 <thead>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FiPrinter, FiX } from 'react-icons/fi';
+
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
@@ -12,15 +13,26 @@ const Overlay = styled.div`
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   width: min(360px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: 8px;
   background: #ffffff;
   padding: 24px;
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+
+  @media (max-width: 767px) {
+    padding: 20px;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -49,6 +61,9 @@ const Field = styled.label`
 `;
 
 const CountInput = styled.input`
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   height: 42px;
   border: 1px solid #c8d0dc;
   border-radius: 6px;
@@ -68,9 +83,14 @@ const Actions = styled.div`
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
+
+  @media (max-width: 767px) {
+    flex-direction: column-reverse;
+  }
 `;
 
 const Button = styled.button`
+  box-sizing: border-box;
   min-height: 40px;
   border: 1px solid ${({ $primary }) => ($primary ? '#2c5e95' : '#c8d0dc')};
   border-radius: 6px;
@@ -83,6 +103,10 @@ const Button = styled.button`
   gap: 8px;
   padding: 0 14px;
   cursor: pointer;
+
+  @media (max-width: 767px) {
+    width: 100%;
+  }
 `;
 
 export default function PrintQuantityModal({

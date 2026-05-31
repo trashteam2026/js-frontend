@@ -1,7 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import {
-  MobileOnlyRoute,
   OwnerOnlyRoute,
   PublicOnlyRoute,
   VolunteerOnlyRoute,
@@ -15,12 +14,12 @@ import SignUp from '@/pages/account/SignUp';
 import ActivityLogPage from '@/pages/activity/ActivityLogPage';
 import BarcodeGeneratorPage from '@/pages/barcode/BarcodeGeneratorPage';
 import InventoryPage from '@/pages/inventory/InventoryPage';
-import VolunteersPage from '@/pages/volunteers/VolunteersPage';
 import LandingPage from '@/pages/landing/LandingPage';
 import NotFound from '@/pages/not-found/NotFound';
 import ScanInPage from '@/pages/scan-in/ScanInPage';
 import ScanOutPage from '@/pages/scan-out/ScanOutPage';
 import VolunteerEntryPage from '@/pages/volunteer/VolunteerEntryPage';
+import VolunteersPage from '@/pages/volunteers/VolunteersPage';
 
 import './App.css';
 
@@ -43,7 +42,10 @@ export default function App() {
 
           <Route element={<OwnerOnlyRoute />}>
             <Route path='inventory' element={<InventoryPage />} />
-            <Route path='barcode-generator' element={<BarcodeGeneratorPage />} />
+            <Route
+              path='barcode-generator'
+              element={<BarcodeGeneratorPage />}
+            />
             <Route path='activity' element={<ActivityLogPage />} />
             <Route path='scan-out' element={<ScanOutPage />} />
             <Route path='volunteers' element={<VolunteersPage />} />
@@ -52,10 +54,7 @@ export default function App() {
           <Route element={<PublicOnlyRoute />}>
             <Route path='login' element={<Login />} />
             <Route path='signup' element={<SignUp />} />
-            <Route
-              path='forgot-password'
-              element={<RequestPasswordReset />}
-            />
+            <Route path='forgot-password' element={<RequestPasswordReset />} />
           </Route>
           <Route path='auth/callback' element={<AuthCallback />} />
           <Route path='auth/reset-password' element={<ResetPassword />} />

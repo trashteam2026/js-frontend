@@ -253,17 +253,13 @@ export default function CartLine({
   const isDone = line.status === 'done';
   const isSubmitting = line.status === 'submitting';
   const isError = line.status === 'error';
-  const unknownBarcode =
-    isError && line.error?.code === 'BARCODE_NOT_FOUND';
-  const insufficient =
-    isError && line.error?.code === 'INSUFFICIENT_STOCK';
+  const unknownBarcode = isError && line.error?.code === 'BARCODE_NOT_FOUND';
+  const insufficient = isError && line.error?.code === 'INSUFFICIENT_STOCK';
 
   const filteredItems = useMemo(() => {
     const q = pickQuery.trim().toLowerCase();
     if (q.length === 0) return items.slice(0, 30);
-    return items
-      .filter((it) => it.name.toLowerCase().includes(q))
-      .slice(0, 30);
+    return items.filter((it) => it.name.toLowerCase().includes(q)).slice(0, 30);
   }, [items, pickQuery]);
 
   const displayName = line.name
@@ -298,9 +294,7 @@ export default function CartLine({
                 <InlineStepper>
                   <QtyButton
                     type='button'
-                    onClick={() =>
-                      onQuantityChange(line.id, line.quantity - 1)
-                    }
+                    onClick={() => onQuantityChange(line.id, line.quantity - 1)}
                     disabled={isSubmitting || line.quantity <= 1}
                     aria-label='Decrease quantity'
                   >
@@ -309,9 +303,7 @@ export default function CartLine({
                   <InlineQtyValue>{line.quantity}</InlineQtyValue>
                   <QtyButton
                     type='button'
-                    onClick={() =>
-                      onQuantityChange(line.id, line.quantity + 1)
-                    }
+                    onClick={() => onQuantityChange(line.id, line.quantity + 1)}
                     disabled={isSubmitting}
                     aria-label='Increase quantity'
                   >

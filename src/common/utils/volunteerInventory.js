@@ -1,3 +1,4 @@
+import { auth } from '@/firebase-config';
 import { MOCK_CATEGORIES } from '@/pages/inventory/mockData';
 
 const STORAGE_KEY = 'pantry_volunteer_added_items';
@@ -30,7 +31,17 @@ export function getAddedItems() {
 }
 
 export async function fetchCategories() {
-  const response = await fetch(buildUrl('/api/inventory/categories'));
+  // GET /api/inventory/categories now requires a valid Firebase token. The
+  // signed-in anonymous volunteer's token is attached the same way addItem's
+  // caller does (auth.currentUser.getIdToken()) so scan-in can still load
+  // categories.
+  const token = await auth.currentUser?.getIdToken().catch(() => null);
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(buildUrl('/api/inventory/categories'), {
+    headers,
+  });
 
   if (!response.ok) {
     throw new Error('Failed to load categories');
@@ -60,8 +71,10 @@ export async function lookupByBarcode(barcode) {
 export async function addItem({
   name,
   category,
+  categoryId,
   expirationMonth,
   expirationYear,
+  noExpiration = false,
   quantity,
   barcode,
   categories = [],
@@ -69,21 +82,34 @@ export async function addItem({
   volunteerToken = null,
 }) {
   const normalizedCategory = normalizeCategoryName(category);
-  const matchedCategory = categories.find(
-    (entry) => normalizeCategoryName(entry.name) === normalizedCategory
-  );
+  const normalizedCategoryId =
+    categoryId === undefined || categoryId === null || categoryId === ''
+      ? null
+      : Number.parseInt(categoryId, 10);
+  const matchedCategory = normalizedCategoryId
+    ? categories.find((entry) => Number(entry.id) === normalizedCategoryId)
+    : categories.find(
+        (entry) => normalizeCategoryName(entry.name) === normalizedCategory
+      );
+
+  // The volunteer form only exposes existing categories. Keep this safety net
+  // so a stale or tampered selection never becomes an uncategorized item.
+  if (!matchedCategory) {
+    const err = new Error('Please pick an existing category');
+    err.code = 'CATEGORY_NOT_FOUND';
+    throw err;
+  }
 
   const payload = {
     name,
-    expirationDate: toExpirationDate(expirationMonth, expirationYear),
+    expirationDate: noExpiration
+      ? null
+      : toExpirationDate(expirationMonth, expirationYear),
     quantity,
     barcode: barcode || null,
     volunteerName: volunteerName || null,
+    categoryId: matchedCategory.id,
   };
-
-  if (matchedCategory?.id) {
-    payload.categoryId = matchedCategory.id;
-  }
 
   const headers = { 'Content-Type': 'application/json' };
   if (volunteerToken) headers['Authorization'] = `Bearer ${volunteerToken}`;
@@ -106,9 +132,11 @@ export async function addItem({
 
   const localRecord = {
     name,
-    category,
+    category: matchedCategory.name,
+    categoryId: matchedCategory.id,
     expirationMonth,
     expirationYear,
+    noExpiration,
     quantity,
     barcode: barcode || null,
     timestamp: new Date().toISOString(),

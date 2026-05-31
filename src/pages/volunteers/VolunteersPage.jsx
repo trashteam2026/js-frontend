@@ -1,14 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { FiRefreshCw, FiUser, FiUsers, FiKey } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { FiRefreshCw, FiUser } from 'react-icons/fi';
+
+import OwnerHeader from '@/common/components/navigation/OwnerHeader';
 import styled from 'styled-components';
 
-import PantryLogo from '@/assets/icons/image-1.svg';
-import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
-import HistoryIcon from '@/assets/icons/tabler-icon-history.svg?react';
-import TableRowIcon from '@/assets/icons/tabler-icon-table-row.svg?react';
-import ProfileDropdown from '../inventory/ProfileDropdown';
-import VolunteerCodeModal from '../inventory/VolunteerCodeModal';
 import { volunteerApi } from '../../services/api';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -20,137 +15,8 @@ const PageWrapper = styled.div`
   background-color: #ececec;
 `;
 
-const TopBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 24px;
-  background-color: #ececec;
-  flex-shrink: 0;
-
-  @media (max-width: 767px) {
-    gap: 8px;
-    padding: 8px 12px;
-  }
-`;
-
-const LogoImg = styled.img`
-  width: 43px;
-  height: 43px;
-  flex-shrink: 0;
-  cursor: pointer;
-
-  @media (max-width: 767px) {
-    width: 32px;
-    height: 32px;
-  }
-`;
-
-const PageTitle = styled.h1`
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-  white-space: nowrap;
-  line-height: 1;
-
-  @media (max-width: 1279px) {
-    display: none;
-  }
-`;
-
-const NavIcons = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-left: auto;
-
-  @media (max-width: 767px) {
-    gap: 10px;
-  }
-`;
-
-const NavIcon = styled.button`
-  background: transparent;
-  border: none;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-  color: #4e4b57;
-
-  svg {
-    width: 24px;
-    height: 24px;
-    stroke: currentColor;
-  }
-
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    stroke: currentColor;
-  }
-
-  @media (max-width: 767px) {
-    width: 44px;
-    height: 44px;
-  }
-`;
-
-const ActiveNavIcon = styled(NavIcon)`
-  color: #2c5e95;
-
-  svg,
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    color: #2c5e95;
-    stroke: #2c5e95 !important;
-  }
-`;
-
-const DesktopOnlyNavIcon = styled(NavIcon)`
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-const ProfileButton = styled.button`
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 9999px;
-  background-color: #2c5e95;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-
-  svg {
-    color: #ffffff;
-    stroke: #ffffff;
-    fill: none;
-  }
-
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    stroke: #ffffff;
-  }
-`;
-
-const ProfileWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
 const Content = styled.div`
+  box-sizing: border-box;
   flex: 1;
   padding: 20px 24px 40px;
   display: flex;
@@ -182,6 +48,13 @@ const SectionHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+`;
+
+const SectionHeadingGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 `;
 
 const SectionTitle = styled.h2`
@@ -189,6 +62,13 @@ const SectionTitle = styled.h2`
   font-size: 1rem;
   font-weight: 700;
   color: #1a2b4a;
+`;
+
+const SectionDescription = styled.p`
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #6b7280;
 `;
 
 const ActiveDot = styled.span`
@@ -228,6 +108,9 @@ const VolunteerList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
 `;
 
 const VolunteerRow = styled.div`
@@ -287,12 +170,13 @@ const StatsTable = styled.div`
   flex-direction: column;
   gap: 1px;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 420px;
 `;
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 80px 100px 160px;
+  grid-template-columns: 1fr 70px 100px 150px;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -309,8 +193,9 @@ const StatsRow = styled.div`
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 60px 80px;
-    > *:last-child {
+    grid-template-columns: 1fr 60px 70px;
+    /* Hide "Last Active" on narrow screens. */
+    > *:nth-child(n + 4) {
       display: none;
     }
   }
@@ -344,25 +229,10 @@ function formatDate(iso) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function VolunteersPage() {
-  const navigate = useNavigate();
-  const profileWrapperRef = useRef(null);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const [active, setActive] = useState([]);
   const [stats, setStats] = useState([]);
   const [loadingActive, setLoadingActive] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
-
-  useEffect(() => {
-    if (!showProfileDropdown) return;
-    const handler = (e) => {
-      if (profileWrapperRef.current && !profileWrapperRef.current.contains(e.target)) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showProfileDropdown]);
 
   const fetchActive = useCallback(async () => {
     setLoadingActive(true);
@@ -393,56 +263,32 @@ export default function VolunteersPage() {
     fetchStats();
   }, [fetchActive, fetchStats]);
 
+  // The Volunteer Session modal lives in OwnerHeader, which renders on this very
+  // page. Ending/generating/regenerating a code there changes who's active and
+  // the session-scoped stats, so re-fetch both panels when it reports a change —
+  // otherwise they sit stale behind the modal until a manual refresh.
+  const handleSessionChange = useCallback(() => {
+    fetchActive();
+    fetchStats();
+  }, [fetchActive, fetchStats]);
+
   return (
     <PageWrapper>
-      <TopBar>
-        <LogoImg
-          src={PantryLogo}
-          alt='New Trier Township'
-          onClick={() => navigate('/inventory')}
-        />
-        <PageTitle onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-          New Trier Township Food Pantry Inventory
-        </PageTitle>
-
-        <NavIcons>
-          <NavIcon title='Inventory' onClick={() => navigate('/inventory')}>
-            <TableRowIcon />
-          </NavIcon>
-          <DesktopOnlyNavIcon title='Scan Out' onClick={() => navigate('/scan-out')}>
-            <CashRegisterIcon />
-          </DesktopOnlyNavIcon>
-          <DesktopOnlyNavIcon title='Activity' onClick={() => navigate('/activity')}>
-            <HistoryIcon />
-          </DesktopOnlyNavIcon>
-          <ActiveNavIcon title='Volunteers'>
-            <FiUsers size={22} />
-          </ActiveNavIcon>
-          <NavIcon title='Volunteer Session' onClick={() => setShowVolunteerModal(true)}>
-            <FiKey size={22} />
-          </NavIcon>
-          <ProfileWrapper ref={profileWrapperRef}>
-            <ProfileButton
-              title='Profile'
-              onClick={() => setShowProfileDropdown((o) => !o)}
-            >
-              <FiUser size={24} color='#ffffff' />
-            </ProfileButton>
-            {showProfileDropdown && (
-              <ProfileDropdown onClose={() => setShowProfileDropdown(false)} />
-            )}
-          </ProfileWrapper>
-        </NavIcons>
-      </TopBar>
+      <OwnerHeader active='volunteers' onSessionChange={handleSessionChange} />
 
       <Content>
         {/* Active now */}
         <SectionCard>
           <SectionHeader>
-            <SectionTitle>
-              <ActiveDot />
-              Active Now
-            </SectionTitle>
+            <SectionHeadingGroup>
+              <SectionTitle>
+                <ActiveDot />
+                Active Now
+              </SectionTitle>
+              <SectionDescription>
+                Active in the current session.
+              </SectionDescription>
+            </SectionHeadingGroup>
             <RefreshButton
               onClick={fetchActive}
               title='Refresh'
@@ -468,8 +314,7 @@ export default function VolunteersPage() {
                     </VolunteerMeta>
                   </VolunteerInfo>
                   <StatBadge>
-                    {v.itemsScanned}{' '}
-                    {v.itemsScanned === 1 ? 'item' : 'items'}
+                    {v.itemsScanned} {v.itemsScanned === 1 ? 'scan' : 'scans'}
                   </StatBadge>
                 </VolunteerRow>
               ))}
@@ -480,13 +325,18 @@ export default function VolunteersPage() {
         {/* Historical stats */}
         <SectionCard>
           <SectionHeader>
-            <SectionTitle>
-              <FiUser
-                size={15}
-                style={{ marginRight: 6, verticalAlign: 'middle' }}
-              />
-              All-Time Stats
-            </SectionTitle>
+            <SectionHeadingGroup>
+              <SectionTitle>
+                <FiUser
+                  size={15}
+                  style={{ marginRight: 6, verticalAlign: 'middle' }}
+                />
+                All-Time Stats
+              </SectionTitle>
+              <SectionDescription>
+                Stats for the current session code.
+              </SectionDescription>
+            </SectionHeadingGroup>
             <RefreshButton
               onClick={fetchStats}
               title='Refresh'
@@ -499,15 +349,12 @@ export default function VolunteersPage() {
           {loadingStats ? (
             <EmptyText>Loading…</EmptyText>
           ) : stats.length === 0 ? (
-            <EmptyText>
-              No volunteer activity logged yet. Run the DB migration to enable
-              tracking.
-            </EmptyText>
+            <EmptyText>No volunteer activity for the current code yet.</EmptyText>
           ) : (
             <StatsTable>
               <StatsRow>
                 <span>Name</span>
-                <span>Sessions</span>
+                <span>Scans</span>
                 <span>Items Added</span>
                 <span>Last Active</span>
               </StatsRow>
@@ -516,7 +363,7 @@ export default function VolunteersPage() {
                   <span style={{ fontWeight: 600, color: '#1a2b4a' }}>
                     {s.volunteer_name}
                   </span>
-                  <span>{s.sessions}</span>
+                  <span>{s.scan_count ?? 0}</span>
                   <span>{s.total_items ?? 0}</span>
                   <span style={{ color: '#6b7280' }}>
                     {formatDate(s.last_active)}
@@ -527,10 +374,6 @@ export default function VolunteersPage() {
           )}
         </SectionCard>
       </Content>
-
-      {showVolunteerModal && (
-        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
-      )}
     </PageWrapper>
   );
 }

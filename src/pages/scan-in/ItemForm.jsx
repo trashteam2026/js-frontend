@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiArrowLeft, FiEdit2, FiMinus, FiPlus } from 'react-icons/fi';
 
 import {
   findCategoryForItem,
-  getAllCategoryNames,
   getAllItemNames,
 } from '@/common/utils/volunteerInventory';
 import PropTypes from 'prop-types';
@@ -108,6 +107,27 @@ const TextInput = styled.input`
   }
 `;
 
+const SelectInput = styled.select`
+  font-size: 1rem;
+  padding: 10px 12px;
+  border: 1px solid #c7d2e3;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1a2b4a;
+  background-color: ${({ disabled }) => (disabled ? '#eef2f8' : '#ffffff')};
+  outline: none;
+
+  &:focus {
+    border-color: #2a4d8f;
+  }
+
+  &:disabled {
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+`;
+
 const Dropdown = styled.ul`
   list-style: none;
   margin: 0;
@@ -142,9 +162,24 @@ const DateRow = styled.div`
   gap: 10px;
 `;
 
-const DateInput = styled(TextInput)`
+const DateSelect = styled(SelectInput)`
   text-align: center;
-  letter-spacing: 2px;
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #1a2b4a;
+  font-weight: 600;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: #2a4d8f;
+  }
 `;
 
 const QuantityRow = styled.div`
@@ -219,6 +254,7 @@ export default function ItemForm({
   mode,
   initialBarcode,
   initialCategory,
+  initialCategoryId,
   initialName,
   lookupSource,
   categoryOptions,
@@ -229,12 +265,12 @@ export default function ItemForm({
   const categoryRef = useRef(null);
   const isDatabaseMatch = mode === 'scanned' && lookupSource === 'database';
   const [name, setName] = useState(initialName || '');
-  const [manualCategory, setManualCategory] = useState(initialCategory || '');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
+  const [noExpiration, setNoExpiration] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [nameFocused, setNameFocused] = useState(false);
-  const [categoryFocused, setCategoryFocused] = useState(false);
   const [categoryMatchedByName, setCategoryMatchedByName] = useState(false);
   const [error, setError] = useState('');
 
@@ -242,11 +278,6 @@ export default function ItemForm({
     () => getAllItemNames(categoryOptions),
     [categoryOptions]
   );
-  const allCategories = useMemo(
-    () => getAllCategoryNames(categoryOptions),
-    [categoryOptions]
-  );
-  const category = manualCategory;
 
   const filteredItems = useMemo(() => {
     const q = name.trim().toLowerCase();
@@ -256,15 +287,44 @@ export default function ItemForm({
       .slice(0, 8);
   }, [allItems, name]);
 
-  const filteredCategories = useMemo(() => {
-    const q = category.trim().toLowerCase();
-    if (!q) return allCategories.slice(0, 8);
-    return allCategories
-      .filter((c) => c.toLowerCase().includes(q) && c.toLowerCase() !== q)
-      .slice(0, 8);
-  }, [allCategories, category]);
+  const selectedCategory = useMemo(
+    () =>
+      (categoryOptions || []).find(
+        (option) => String(option.id) === selectedCategoryId
+      ) || null,
+    [categoryOptions, selectedCategoryId]
+  );
 
-  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(
+    () => Array.from({ length: 76 }, (_, index) => 2025 + index),
+    []
+  );
+
+  useEffect(() => {
+    if (selectedCategoryId || !categoryOptions?.length) return;
+
+    const initialId =
+      initialCategoryId === undefined ||
+      initialCategoryId === null ||
+      initialCategoryId === ''
+        ? null
+        : String(initialCategoryId);
+    const byId = initialId
+      ? categoryOptions.find((option) => String(option.id) === initialId)
+      : null;
+    const byName = initialCategory
+      ? categoryOptions.find(
+          (option) =>
+            option.name.trim().toLowerCase() ===
+            initialCategory.trim().toLowerCase()
+        )
+      : null;
+    const initialMatch = byId || byName;
+
+    if (initialMatch) {
+      setSelectedCategoryId(String(initialMatch.id));
+    }
+  }, [categoryOptions, initialCategory, initialCategoryId, selectedCategoryId]);
 
   const focusName = () => {
     nameRef.current?.focus();
@@ -278,30 +338,16 @@ export default function ItemForm({
     setName(value);
     const existingCategory = findCategoryForItem(value, categoryOptions);
     if (existingCategory) {
-      setManualCategory(existingCategory);
-      setCategoryMatchedByName(true);
+      const match = (categoryOptions || []).find(
+        (option) =>
+          option.name.trim().toLowerCase() === existingCategory.toLowerCase()
+      );
+      setSelectedCategoryId(match ? String(match.id) : '');
+      setCategoryMatchedByName(Boolean(match));
     } else {
       setCategoryMatchedByName(false);
     }
     setNameFocused(false);
-    setError('');
-  };
-
-  const pickCategory = (value) => {
-    setManualCategory(value);
-    setCategoryFocused(false);
-    setError('');
-  };
-
-  const handleMonthChange = (e) => {
-    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 2);
-    setMonth(cleaned);
-    setError('');
-  };
-
-  const handleYearChange = (e) => {
-    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 4);
-    setYear(cleaned);
     setError('');
   };
 
@@ -311,38 +357,31 @@ export default function ItemForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    const trimmedCategory = category.trim();
     if (!trimmedName) {
       setError('Please enter an item name');
       focusName();
       return;
     }
-    if (!isDatabaseMatch && !trimmedCategory) {
-      setError('Please choose a category for this new item');
+    if (!selectedCategoryId || !selectedCategory) {
+      setError('Please pick an existing category');
       focusCategory();
       return;
     }
-    if (!month || !year) {
+    if (!noExpiration && (!month || !year)) {
       setError('Must input expiration date');
       return;
     }
-    const m = parseInt(month, 10);
-    const y = parseInt(year, 10);
-    if (Number.isNaN(m) || m < 1 || m > 12) {
-      setError('Month must be between 1 and 12');
-      return;
-    }
-    if (Number.isNaN(y) || y < currentYear) {
-      setError(`Year must be ${currentYear} or later`);
-      return;
-    }
+    const m = noExpiration ? null : parseInt(month, 10);
+    const y = noExpiration ? null : parseInt(year, 10);
 
     try {
       await onSubmit({
         name: trimmedName,
-        category: trimmedCategory || null,
+        category: selectedCategory.name,
+        categoryId: selectedCategory.id,
         expirationMonth: m,
         expirationYear: y,
+        noExpiration,
         quantity,
         barcode: initialBarcode || null,
       });
@@ -352,7 +391,9 @@ export default function ItemForm({
   };
 
   const nameLabel = mode === 'scanned' ? 'Recognized Item' : 'Item';
-  const categoryLocked = isDatabaseMatch || categoryMatchedByName;
+  const categoryLocked = Boolean(
+    (isDatabaseMatch || categoryMatchedByName) && selectedCategoryId
+  );
   const nameLocked = isDatabaseMatch;
 
   return (
@@ -434,73 +475,79 @@ export default function ItemForm({
         <Field>
           <FieldHeaderRow>
             <FieldLabel htmlFor='item-category'>Category</FieldLabel>
-            {!categoryLocked && (
-              <EditButton type='button' onClick={focusCategory}>
-                Edit <FiEdit2 size={12} />
-              </EditButton>
-            )}
           </FieldHeaderRow>
-          <TextInput
+          <SelectInput
             id='item-category'
             ref={categoryRef}
-            type='text'
-            value={category}
-            readOnly={categoryLocked}
+            value={selectedCategoryId}
+            disabled={Boolean(categoryLocked)}
             onChange={(e) => {
-              setManualCategory(e.target.value);
+              setSelectedCategoryId(e.target.value);
+              setCategoryMatchedByName(false);
               setError('');
             }}
-            onFocus={() => {
-              if (!categoryLocked) {
-                setCategoryFocused(true);
-              }
-            }}
-            onBlur={() => setTimeout(() => setCategoryFocused(false), 150)}
-            autoComplete='off'
-            placeholder={categoryLocked ? '' : 'Choose a category'}
-          />
+          >
+            <option value=''>Choose a category</option>
+            {categoryOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </SelectInput>
           {categoryLocked && (
             <BarcodeNote>This item already exists in inventory.</BarcodeNote>
           )}
-          {!categoryLocked &&
-            categoryFocused &&
-            filteredCategories.length > 0 && (
-              <Dropdown role='listbox'>
-                {filteredCategories.map((c) => (
-                  <DropdownItem
-                    key={c}
-                    role='option'
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      pickCategory(c);
-                    }}
-                  >
-                    {c}
-                  </DropdownItem>
-                ))}
-              </Dropdown>
-            )}
         </Field>
 
         <Field>
           <FieldLabel>Expiration Date</FieldLabel>
+          <CheckboxLabel>
+            <input
+              type='checkbox'
+              checked={noExpiration}
+              onChange={(e) => {
+                setNoExpiration(e.target.checked);
+                setError('');
+              }}
+            />
+            No expiration date
+          </CheckboxLabel>
           <DateRow>
-            <DateInput
-              type='text'
-              inputMode='numeric'
-              placeholder='MM'
+            <DateSelect
               value={month}
-              onChange={handleMonthChange}
+              onChange={(e) => {
+                setMonth(e.target.value);
+                setError('');
+              }}
               aria-label='Expiration month'
-            />
-            <DateInput
-              type='text'
-              inputMode='numeric'
-              placeholder='YYYY'
+              disabled={noExpiration}
+            >
+              <option value=''>MM</option>
+              {Array.from({ length: 12 }, (_, index) => {
+                const value = String(index + 1).padStart(2, '0');
+                return (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                );
+              })}
+            </DateSelect>
+            <DateSelect
               value={year}
-              onChange={handleYearChange}
+              onChange={(e) => {
+                setYear(e.target.value);
+                setError('');
+              }}
               aria-label='Expiration year'
-            />
+              disabled={noExpiration}
+            >
+              <option value=''>YYYY</option>
+              {yearOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </DateSelect>
           </DateRow>
         </Field>
 
@@ -538,6 +585,7 @@ ItemForm.propTypes = {
   mode: PropTypes.oneOf(['scanned', 'manual']).isRequired,
   initialBarcode: PropTypes.string,
   initialCategory: PropTypes.string,
+  initialCategoryId: PropTypes.number,
   initialName: PropTypes.string,
   lookupSource: PropTypes.string,
   categoryOptions: PropTypes.arrayOf(
@@ -553,6 +601,7 @@ ItemForm.propTypes = {
 ItemForm.defaultProps = {
   initialBarcode: null,
   initialCategory: '',
+  initialCategoryId: null,
   initialName: '',
   lookupSource: null,
   categoryOptions: [],

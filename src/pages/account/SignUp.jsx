@@ -105,8 +105,7 @@ export default function SignUp() {
       }
       navigate('/login', {
         state: {
-          message:
-            'Account created successfully! Please check your email to verify your account.',
+          message: 'Account created successfully! You can now log in.',
         },
       });
     } catch (error) {
@@ -165,8 +164,7 @@ export default function SignUp() {
           text='Sign up with Google'
         />
         <LoginPrompt>
-          Already have an account?{' '}
-          <LoginLink to='/login'>Log in</LoginLink>
+          Already have an account? <LoginLink to='/login'>Log in</LoginLink>
         </LoginPrompt>
       </Form>
     </StyledPage>

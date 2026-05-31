@@ -1,24 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiKey, FiUser, FiUsers } from 'react-icons/fi';
 
-import PantryLogo from '@/assets/icons/image-1.svg';
-import CashRegisterIcon from '@/assets/icons/tabler-icon-cash-register.svg?react';
-import HistoryIcon from '@/assets/icons/tabler-icon-history.svg?react';
-import TableRowIcon from '@/assets/icons/tabler-icon-table-row.svg?react';
+import OwnerHeader from '@/common/components/navigation/OwnerHeader';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import styled from 'styled-components';
 
 import { checkoutApi, itemsApi } from '../../services/api';
-import ProfileDropdown from '../inventory/ProfileDropdown';
-import VolunteerCodeModal from '../inventory/VolunteerCodeModal';
 import CartLine from './CartLine';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
 const NAVY = '#2a4d8f';
-const NAVY_2 = '#2c5e95';
 const NAVY_DARK = '#1a2b4a';
 const REMOVED_RED = '#ef4444';
 const SUCCESS_GREEN = '#16a34a';
@@ -28,141 +20,6 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   background-color: #ececec;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 24px;
-  background-color: #ececec;
-  flex-shrink: 0;
-
-  @media (max-width: 767px) {
-    gap: 8px;
-    padding: 8px 12px;
-  }
-`;
-
-const LogoImg = styled.img`
-  width: 43px;
-  height: 43px;
-  flex-shrink: 0;
-
-  @media (max-width: 767px) {
-    width: 32px;
-    height: 32px;
-  }
-`;
-
-const PageTitle = styled.h1`
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-  white-space: nowrap;
-  line-height: 1;
-  flex: 1;
-`;
-
-const MobilePageLabel = styled.h1`
-  display: none;
-
-  @media (max-width: 767px) {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
-    color: ${NAVY_DARK};
-    margin: 0;
-    flex: 1;
-    white-space: nowrap;
-  }
-`;
-
-const DesktopPageTitle = styled(PageTitle)`
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-const NavIcons = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-left: auto;
-
-  @media (max-width: 767px) {
-    gap: 10px;
-  }
-`;
-
-const NavIcon = styled.button`
-  background: transparent;
-  border: none;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-  color: #4e4b57;
-  svg {
-    width: 24px;
-    height: 24px;
-    color: currentColor;
-    stroke: currentColor;
-  }
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    stroke: currentColor;
-  }
-
-  @media (max-width: 767px) {
-    width: 44px;
-    height: 44px;
-  }
-`;
-
-const ActiveNavIcon = styled(NavIcon)`
-  color: ${NAVY_2};
-  svg,
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    color: ${NAVY_2};
-    stroke: ${NAVY_2} !important;
-  }
-
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-const ProfileButton = styled.button`
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 9999px;
-  background-color: ${NAVY_2};
-  color: #ffffff;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-  svg {
-    color: #ffffff;
-    stroke: #ffffff;
-    fill: none;
-  }
-`;
-
-const ProfileWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
 `;
 
 const Content = styled.div`
@@ -176,7 +33,7 @@ const Content = styled.div`
   min-height: 0;
 
   @media (max-width: 767px) {
-    padding: 12px 12px 0;
+    padding: 12px 12px 16px;
     gap: 12px;
   }
 `;
@@ -193,6 +50,15 @@ const Panel = styled.div`
   @media (max-width: 767px) {
     padding: 12px;
     gap: 10px;
+  }
+`;
+
+// Cart panel only: on mobile it's the 1fr grid row, so it stretches to the
+// bottom and runs behind the floating footer. Lift its bottom edge clear of
+// the footer so there's visible empty space beneath the white Cart box.
+const CartPanel = styled(Panel)`
+  @media (max-width: 767px) {
+    margin-bottom: 80px;
   }
 `;
 
@@ -331,6 +197,7 @@ const CartSummary = styled.span`
 
 const CartList = styled.div`
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -359,14 +226,15 @@ const Footer = styled.div`
 
   @media (max-width: 767px) {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
     z-index: 30;
     padding: 10px 14px;
     background: #ffffff;
-    border-top: 1px solid #e8ecf2;
-    box-shadow: 0 -6px 16px rgba(24, 39, 75, 0.08);
+    border: 1px solid #e8ecf2;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(24, 39, 75, 0.16);
   }
 `;
 
@@ -449,7 +317,6 @@ const SCAN_DEBOUNCE_MS = 1500;
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ScanOutPage() {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   const [items, setItems] = useState([]);
@@ -462,9 +329,6 @@ export default function ScanOutPage() {
   const [cameraStatus, setCameraStatus] = useState('starting');
   const [cameraError, setCameraError] = useState('');
 
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
-  const profileWrapperRef = useRef(null);
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
   const confirmationTimerRef = useRef(null);
@@ -491,21 +355,6 @@ export default function ScanOutPage() {
       cancelled = true;
     };
   }, []);
-
-  // ── Profile dropdown outside-click ─────────────────────────────────────────
-  useEffect(() => {
-    if (!showProfileDropdown) return undefined;
-    const handleClickOutside = (e) => {
-      if (
-        profileWrapperRef.current &&
-        !profileWrapperRef.current.contains(e.target)
-      ) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showProfileDropdown]);
 
   // ── Scan ingestion ─────────────────────────────────────────────────────────
   const handleScan = useCallback(
@@ -830,9 +679,7 @@ export default function ScanOutPage() {
 
           setLines((prev) =>
             prev.map((l) =>
-              l.id === line.id
-                ? { ...l, status: 'error', error: errorObj }
-                : l
+              l.id === line.id ? { ...l, status: 'error', error: errorObj } : l
             )
           );
 
@@ -873,62 +720,11 @@ export default function ScanOutPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <PageWrapper>
-      <TopBar>
-        <LogoImg
-          src={PantryLogo}
-          alt='New Trier Township'
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        />
-        <DesktopPageTitle
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        >
-          New Trier Township Food Pantry Scan Out
-        </DesktopPageTitle>
-        <MobilePageLabel
-          onClick={() => navigate('/inventory')}
-          style={{ cursor: 'pointer' }}
-        >
-          Scan Out
-        </MobilePageLabel>
-        <NavIcons>
-          <NavIcon title='Inventory' onClick={() => navigate('/inventory')}>
-            <TableRowIcon />
-          </NavIcon>
-          <ActiveNavIcon title='Scan Out'>
-            <CashRegisterIcon />
-          </ActiveNavIcon>
-          <NavIcon title='Activity' onClick={() => navigate('/activity')}>
-            <HistoryIcon />
-          </NavIcon>
-          <NavIcon
-            title='Volunteers'
-            onClick={() => navigate('/volunteers')}
-          >
-            <FiUsers size={22} />
-          </NavIcon>
-          <NavIcon
-            title='Volunteer Session'
-            onClick={() => setShowVolunteerModal(true)}
-          >
-            <FiKey size={22} />
-          </NavIcon>
-          <ProfileWrapper ref={profileWrapperRef}>
-            <ProfileButton
-              title='Profile'
-              onClick={() => setShowProfileDropdown((o) => !o)}
-            >
-              <FiUser size={24} color='#ffffff' />
-            </ProfileButton>
-            {showProfileDropdown && (
-              <ProfileDropdown
-                onClose={() => setShowProfileDropdown(false)}
-              />
-            )}
-          </ProfileWrapper>
-        </NavIcons>
-      </TopBar>
+      <OwnerHeader
+        active='scan-out'
+        title='New Trier Township Food Pantry Scan Out'
+        mobileTitle='Scan Out'
+      />
 
       <Content $isMobile={isMobile}>
         <Panel>
@@ -969,12 +765,11 @@ export default function ScanOutPage() {
           </ScannerBody>
         </Panel>
 
-        <Panel style={{ position: 'relative' }}>
+        <CartPanel style={{ position: 'relative' }}>
           <CartHeader>
             <PanelTitle>Cart</PanelTitle>
             <CartSummary>
-              {totals.itemsCount} {totals.itemsCount === 1 ? 'line' : 'lines'} ·
-              {' '}
+              {totals.itemsCount} {totals.itemsCount === 1 ? 'line' : 'lines'} ·{' '}
               {totals.units} {totals.units === 1 ? 'unit' : 'units'}
             </CartSummary>
           </CartHeader>
@@ -983,9 +778,7 @@ export default function ScanOutPage() {
 
           <CartList>
             {lines.length === 0 ? (
-              <EmptyCart>
-                Scan an item to start a checkout.
-              </EmptyCart>
+              <EmptyCart>Scan an item to start a checkout.</EmptyCart>
             ) : (
               lines.map((line) => (
                 <CartLine
@@ -1027,12 +820,8 @@ export default function ScanOutPage() {
               </div>
             </ConfirmationOverlay>
           )}
-        </Panel>
+        </CartPanel>
       </Content>
-
-      {showVolunteerModal && (
-        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
-      )}
     </PageWrapper>
   );
 }

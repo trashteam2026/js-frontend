@@ -1,11 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { useUser } from '@/common/contexts/UserContext';
-import useIsMobile from '@/common/hooks/useIsMobile';
-
-export function PrivateRoute() {
-  return <Outlet />;
-}
 
 export function PublicOnlyRoute() {
   const { role, isLoading } = useUser();
@@ -24,25 +19,10 @@ export function OwnerOnlyRoute() {
   return <Outlet />;
 }
 
-export function AuthenticatedRoute() {
-  const { role, isLoading } = useUser();
-
-  if (isLoading) return null;
-  if (role === null) return <Navigate to='/' replace />;
-  return <Outlet />;
-}
-
 export function VolunteerOnlyRoute() {
   const { role, isLoading } = useUser();
 
   if (isLoading) return null;
   if (role !== 'volunteer') return <Navigate to='/volunteer/entry' replace />;
-  return <Outlet />;
-}
-
-export function MobileOnlyRoute() {
-  const isMobile = useIsMobile();
-
-  if (!isMobile) return <Navigate to='/login' replace />;
   return <Outlet />;
 }

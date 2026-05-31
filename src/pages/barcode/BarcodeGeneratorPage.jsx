@@ -1,47 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FaBarcode } from 'react-icons/fa';
-import { FiArrowLeft, FiPrinter, FiX } from 'react-icons/fi';
+import { FiPrinter, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
 
 import PrintQuantityModal from '@/common/components/PrintQuantityModal';
+import OwnerHeader from '@/common/components/navigation/OwnerHeader';
 import { barcodeApi, categoriesApi } from '@/services/api';
-import {
-  openBarcodePrintWindow,
-  renderBarcodeSvg,
-} from '@/utils/barcodePrint';
+import { openBarcodePrintWindow, renderBarcodeSvg } from '@/utils/barcodePrint';
+import styled from 'styled-components';
 
 const PageWrapper = styled.div`
   min-height: 100vh;
   background: #ececec;
   color: #111827;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-
-  @media (max-width: 767px) {
-    padding: 12px;
-  }
-`;
-
-const IconButton = styled.button`
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 9999px;
-  display: grid;
-  place-items: center;
-  background: #d4dce8;
-  color: #1f2937;
-  cursor: pointer;
-
-  &:hover {
-    background: #c6d2e2;
-  }
 `;
 
 const Title = styled.h1`
@@ -52,6 +23,7 @@ const Title = styled.h1`
 `;
 
 const Content = styled.main`
+  box-sizing: border-box;
   width: min(620px, calc(100vw - 32px));
   margin: 18px auto 0;
   background: #ffffff;
@@ -61,7 +33,7 @@ const Content = styled.main`
 
   @media (max-width: 767px) {
     margin-top: 8px;
-    padding: 20px;
+    padding: 20px 16px;
   }
 `;
 
@@ -96,6 +68,9 @@ const Field = styled.label`
 `;
 
 const TextInput = styled.input`
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
   border: 1px solid #c8d0dc;
   border-radius: 6px;
@@ -111,6 +86,9 @@ const TextInput = styled.input`
 `;
 
 const Select = styled.select`
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
   border: 1px solid #c8d0dc;
   border-radius: 6px;
@@ -127,6 +105,8 @@ const Select = styled.select`
 `;
 
 const SubmitButton = styled.button`
+  box-sizing: border-box;
+  width: 100%;
   min-height: 46px;
   border: none;
   border-radius: 6px;
@@ -161,15 +141,26 @@ const Overlay = styled.div`
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   width: min(440px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: 8px;
   background: #ffffff;
   padding: 24px;
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+
+  @media (max-width: 767px) {
+    padding: 20px;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -195,6 +186,7 @@ const ResultMeta = styled.div`
   margin-bottom: 14px;
   font-size: 14px;
   color: #374151;
+  overflow-wrap: anywhere;
 `;
 
 const BarcodePreview = styled.div`
@@ -216,9 +208,15 @@ const ActionRow = styled.div`
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
 `;
 
 const SecondaryButton = styled.button`
+  box-sizing: border-box;
+  flex: 1;
   min-height: 40px;
   border: 1px solid #2c5e95;
   border-radius: 6px;
@@ -231,6 +229,11 @@ const SecondaryButton = styled.button`
   gap: 8px;
   padding: 0 14px;
   cursor: pointer;
+
+  @media (max-width: 767px) {
+    flex: none;
+    width: 100%;
+  }
 `;
 
 export default function BarcodeGeneratorPage() {
@@ -308,17 +311,7 @@ export default function BarcodeGeneratorPage() {
 
   return (
     <PageWrapper>
-      <TopBar>
-        <IconButton
-          type='button'
-          title='Back to inventory'
-          aria-label='Back to inventory'
-          onClick={() => navigate('/inventory')}
-        >
-          <FiArrowLeft size={22} />
-        </IconButton>
-        <Title>Barcode Generator</Title>
-      </TopBar>
+      <OwnerHeader active='barcode' />
 
       <Content>
         <HeaderRow>
@@ -384,7 +377,9 @@ export default function BarcodeGeneratorPage() {
               </div>
               <div>
                 <strong>Category:</strong>{' '}
-                {result.category_name || selectedCategory?.name || 'Uncategorized'}
+                {result.category_name ||
+                  selectedCategory?.name ||
+                  'Uncategorized'}
               </div>
               <div>
                 <strong>Barcode:</strong> {result.barcode}

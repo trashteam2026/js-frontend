@@ -47,6 +47,8 @@ function mapAuthCodeToMessage(authCode) {
       return 'Please enter a valid email address.';
     case 'auth/invalid-credential':
       return 'Email or password is incorrect. Please try again.';
+    case 'auth/not-owner':
+      return "This login is for pantry owners only. If you're a volunteer, use Volunteer Access from the home screen.";
     default:
       return 'An unexpected error occurred. Please try again.';
   }
@@ -95,7 +97,7 @@ export default function Login() {
     try {
       await googleAuth();
     } catch (error) {
-      setError(error.message);
+      setError(error.code ? mapAuthCodeToMessage(error.code) : error.message);
     }
   };
 
