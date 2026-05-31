@@ -147,12 +147,22 @@ const ErrorText = styled.p`
   text-align: center;
 `;
 
+// A registration failure happens AFTER anonymous sign-in has flipped the role to
+// "volunteer", so PublicOnlyRoute has already navigated away and unmounted this
+// page; the catch's signOut then bounces a fresh instance back here. A setError
+// on the unmounted instance is lost, so we stash the message at module scope
+// (survives the unmount → remount, which is in-memory, not a page reload) and the
+// remounted page reads it on mount. Cleared on read so it shows exactly once.
+let pendingRegistrationError = '';
+
 export default function VolunteerEntryPage() {
   const navigate = useNavigate();
   const { role, isLoading } = useUser();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+  // Seed from any error carried over from a prior (unmounted) attempt so the
+  // remounted page shows it immediately, without a setState-in-effect flash.
+  const [error, setError] = useState(() => pendingRegistrationError || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -163,6 +173,13 @@ export default function VolunteerEntryPage() {
       navigate('/scan-in', { replace: true });
     }
   }, [role, isLoading, isSubmitting, navigate]);
+
+  // One-shot: clear the carried error after mount so it shows exactly once and
+  // never reappears on a later visit. Done in an effect (not the initializer
+  // above) to keep that initializer a pure read under StrictMode double-invoke.
+  useEffect(() => {
+    pendingRegistrationError = '';
+  }, []);
 
   if (isLoading || role === 'owner' || (role === 'volunteer' && !isSubmitting)) {
     return null;
@@ -191,13 +208,18 @@ export default function VolunteerEntryPage() {
           code: code.trim(),
         });
       } catch {
+        // Anonymous sign-in already flipped the role to "volunteer", so this
+        // page is being unmounted. Stash the error before signing out so the
+        // remounted entry page can surface it (a setError here would be lost),
+        // then signOut bounces back to /volunteer/entry with the message shown.
+        pendingRegistrationError =
+          'Could not join the session, please try again.';
         try {
           await signOut(auth);
         } catch {
           // Ignore sign-out cleanup errors; the visible registration error is
           // the actionable state for the volunteer.
         }
-        setError('Could not join the session, please try again.');
         setIsSubmitting(false);
         return;
       }

@@ -177,7 +177,7 @@ const ErrorText = styled.p`
   text-align: center;
 `;
 
-export default function VolunteerCodeModal({ onClose }) {
+export default function VolunteerCodeModal({ onClose, onSessionChange }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -198,6 +198,9 @@ export default function VolunteerCodeModal({ onClose }) {
     try {
       const result = await volunteerApi.generateSession();
       setSession(result);
+      // Notify the host page (e.g. /volunteers) so its session-scoped panels
+      // re-fetch — generating or regenerating a code changes who's active.
+      onSessionChange?.();
     } catch {
       setError('Failed to generate code.');
     } finally {
@@ -211,6 +214,8 @@ export default function VolunteerCodeModal({ onClose }) {
     try {
       await volunteerApi.endSession();
       setSession({ active: false, code: null });
+      // Ending the session evicts active volunteers — let the host page refresh.
+      onSessionChange?.();
     } catch {
       setError('Failed to end session.');
     } finally {
@@ -292,4 +297,5 @@ export default function VolunteerCodeModal({ onClose }) {
 
 VolunteerCodeModal.propTypes = {
   onClose: PropTypes.func.isRequired,
+  onSessionChange: PropTypes.func,
 };

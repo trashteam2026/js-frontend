@@ -85,6 +85,18 @@ const ActionCell = styled.button`
   }
 `;
 
+// Occupies the Edit column's grid track when the header is read-only, so the
+// remaining cells stay aligned with the fixed grid-template-columns.
+const HeaderSpacer = styled.div`
+  min-height: 36px;
+  min-width: 0;
+  border-left: 1px solid #c5d4e8;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
 const FilterCell = styled.div`
   display: grid;
   min-height: 36px;
@@ -448,6 +460,7 @@ export default function CategorySection({
   onItemClick,
   onItemAdded,
   onEditCategory,
+  readOnly = false,
 }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
@@ -557,10 +570,14 @@ export default function CategorySection({
     <Wrapper>
       <Header>
         <CategoryName>{category.name}</CategoryName>
-        <ActionCell type='button' onClick={() => onEditCategory?.(category)}>
-          <span>Edit</span>
-          <FiEdit2 size={15} />
-        </ActionCell>
+        {readOnly ? (
+          <HeaderSpacer />
+        ) : (
+          <ActionCell type='button' onClick={() => onEditCategory?.(category)}>
+            <span>Edit</span>
+            <FiEdit2 size={15} />
+          </ActionCell>
+        )}
         <FilterCell>
           <FilterTrigger
             type='button'
@@ -596,16 +613,18 @@ export default function CategorySection({
               $left={kebabPos.left}
               onClick={(e) => e.stopPropagation()}
             >
-              <KebabItem
-                type='button'
-                onClick={() => {
-                  setKebabOpen(false);
-                  onEditCategory?.(category);
-                }}
-              >
-                <FiEdit2 size={14} />
-                Edit
-              </KebabItem>
+              {!readOnly && (
+                <KebabItem
+                  type='button'
+                  onClick={() => {
+                    setKebabOpen(false);
+                    onEditCategory?.(category);
+                  }}
+                >
+                  <FiEdit2 size={14} />
+                  Edit
+                </KebabItem>
+              )}
               <KebabItem
                 type='button'
                 onClick={() => {
@@ -698,34 +717,35 @@ export default function CategorySection({
           ))
         )}
 
-        {addingItem ? (
-          <AddItemRow>
-            <AddItemInput
-              ref={inputRef}
-              placeholder='Item name…'
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') cancelAdding();
-              }}
-            />
-            <AddItemSave
-              onClick={handleSave}
-              disabled={!newItemName.trim() || saving}
-            >
-              Add
-            </AddItemSave>
-            <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
-          </AddItemRow>
-        ) : (
-          <AddItemRow>
-            <AddItemButton type='button' onClick={startAdding}>
-              <FiPlus size={14} />
-              Add Item
-            </AddItemButton>
-          </AddItemRow>
-        )}
+        {!readOnly &&
+          (addingItem ? (
+            <AddItemRow>
+              <AddItemInput
+                ref={inputRef}
+                placeholder='Item name…'
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSave();
+                  if (e.key === 'Escape') cancelAdding();
+                }}
+              />
+              <AddItemSave
+                onClick={handleSave}
+                disabled={!newItemName.trim() || saving}
+              >
+                Add
+              </AddItemSave>
+              <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
+            </AddItemRow>
+          ) : (
+            <AddItemRow>
+              <AddItemButton type='button' onClick={startAdding}>
+                <FiPlus size={14} />
+                Add Item
+              </AddItemButton>
+            </AddItemRow>
+          ))}
       </ItemList>
     </Wrapper>
   );
@@ -733,7 +753,9 @@ export default function CategorySection({
 
 CategorySection.propTypes = {
   category: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    // Real categories have numeric SERIAL ids; the synthetic Uncategorized
+    // fallback group uses a string id.
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
     name: PropTypes.string.isRequired,
     items: PropTypes.array.isRequired,
   }).isRequired,
@@ -742,4 +764,5 @@ CategorySection.propTypes = {
   onItemClick: PropTypes.func,
   onItemAdded: PropTypes.func,
   onEditCategory: PropTypes.func,
+  readOnly: PropTypes.bool,
 };

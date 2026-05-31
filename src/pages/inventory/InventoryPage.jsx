@@ -75,6 +75,11 @@ const Content = styled.div`
   }
 `;
 
+// Synthetic id for the fallback group that holds items whose category_id is
+// NULL or points at a category that no longer exists. A string can't collide
+// with the numeric SERIAL ids of real categories.
+const UNCATEGORIZED_ID = 'uncategorized';
+
 export default function InventoryPage() {
   const isMobile = useIsMobile();
   const [categories, setCategories] = useState([]);
@@ -112,14 +117,32 @@ export default function InventoryPage() {
   }, [loadData]);
 
   // Merge items into their categories
-  const categoriesWithItems = useMemo(
-    () =>
-      categories.map((cat) => ({
-        ...cat,
-        items: items.filter((item) => item.category_id === cat.id),
-      })),
-    [categories, items]
-  );
+  const categoriesWithItems = useMemo(() => {
+    const merged = categories.map((cat) => ({
+      ...cat,
+      items: items.filter((item) => item.category_id === cat.id),
+    }));
+
+    // Safety net: items whose category_id is NULL or points at a category that
+    // no longer exists (e.g. a category row deleted directly in SQL) would
+    // otherwise be silently dropped here — invisible in the UI yet still in the
+    // DB and scan-out-able by barcode. Surface them in a fallback
+    // "Uncategorized" group so they can never become invisible ghosts.
+    const knownIds = new Set(categories.map((cat) => cat.id));
+    const orphanedItems = items.filter(
+      (item) => !knownIds.has(item.category_id)
+    );
+    if (orphanedItems.length > 0) {
+      merged.push({
+        id: UNCATEGORIZED_ID,
+        name: 'Uncategorized',
+        parent_group: null,
+        items: orphanedItems,
+      });
+    }
+
+    return merged;
+  }, [categories, items]);
 
   const foodCategories = useMemo(
     () => categoriesWithItems.filter((c) => c.parent_group === 'food'),
@@ -134,10 +157,16 @@ export default function InventoryPage() {
   const filteredCategories = useMemo(() => {
     let cats = categoriesWithItems;
 
+    // The Uncategorized fallback has no parent_group; keep it in every tab so
+    // orphaned items stay visible regardless of which tab is active.
     if (activeTab === 'food') {
-      cats = cats.filter((c) => c.parent_group === 'food');
+      cats = cats.filter(
+        (c) => c.parent_group === 'food' || c.id === UNCATEGORIZED_ID
+      );
     } else if (activeTab === 'non_food') {
-      cats = cats.filter((c) => c.parent_group === 'non_food');
+      cats = cats.filter(
+        (c) => c.parent_group === 'non_food' || c.id === UNCATEGORIZED_ID
+      );
     }
 
     if (selectedCategoryId) {
@@ -311,6 +340,11 @@ export default function InventoryPage() {
             <CategorySection
               key={category.id}
               category={category}
+              // The Uncategorized fallback isn't a real category row, so renaming
+              // it or adding items to it would have no valid category_id. Render
+              // it read-only; the owner recovers an orphan by opening it and
+              // reassigning its category (or deleting it) in ItemDetailModal.
+              readOnly={category.id === UNCATEGORIZED_ID}
               sortBy={perCategoryOverrides[category.id] ?? globalSort}
               onSortChange={(value) =>
                 setPerCategoryOverrides((prev) => ({

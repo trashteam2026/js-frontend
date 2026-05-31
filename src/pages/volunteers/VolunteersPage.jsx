@@ -263,9 +263,18 @@ export default function VolunteersPage() {
     fetchStats();
   }, [fetchActive, fetchStats]);
 
+  // The Volunteer Session modal lives in OwnerHeader, which renders on this very
+  // page. Ending/generating/regenerating a code there changes who's active and
+  // the session-scoped stats, so re-fetch both panels when it reports a change —
+  // otherwise they sit stale behind the modal until a manual refresh.
+  const handleSessionChange = useCallback(() => {
+    fetchActive();
+    fetchStats();
+  }, [fetchActive, fetchStats]);
+
   return (
     <PageWrapper>
-      <OwnerHeader active='volunteers' />
+      <OwnerHeader active='volunteers' onSessionChange={handleSessionChange} />
 
       <Content>
         {/* Active now */}

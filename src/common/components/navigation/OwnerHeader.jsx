@@ -310,6 +310,7 @@ export default function OwnerHeader({
   searchValue = '',
   onSearchChange,
   searchPlaceholder = 'Search for an item...',
+  onSessionChange,
 }) {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -473,7 +474,10 @@ export default function OwnerHeader({
       )}
 
       {showVolunteerModal && (
-        <VolunteerCodeModal onClose={() => setShowVolunteerModal(false)} />
+        <VolunteerCodeModal
+          onClose={() => setShowVolunteerModal(false)}
+          onSessionChange={onSessionChange}
+        />
       )}
     </>
   );
@@ -493,4 +497,5 @@ OwnerHeader.propTypes = {
   searchValue: PropTypes.string,
   onSearchChange: PropTypes.func,
   searchPlaceholder: PropTypes.string,
+  onSessionChange: PropTypes.func,
 };
