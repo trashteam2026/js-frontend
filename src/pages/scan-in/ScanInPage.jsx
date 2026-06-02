@@ -586,7 +586,7 @@ export default function ScanInPage() {
     };
   }, []);
 
-  // Poll every 60 s so idle volunteers are evicted promptly when session ends.
+  // Poll every 10 s so volunteers are evicted promptly when the owner ends the session.
   // 404 (owner ended the session / backend restarted) is handled the same as a
   // regenerated code (403/SESSION_ENDED) — all three mean this code is dead.
   useEffect(() => {
@@ -602,7 +602,7 @@ export default function ScanInPage() {
           setSessionEnded(true);
         }
       }
-    }, 60_000);
+    }, 10_000);
     return () => clearInterval(interval);
   }, []);
 
