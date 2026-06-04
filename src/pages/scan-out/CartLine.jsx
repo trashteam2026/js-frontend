@@ -34,6 +34,11 @@ const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  opacity: ${(p) => (p.$fading ? 0 : 1)};
+  transform: ${(p) => (p.$fading ? 'translateX(8px)' : 'translateX(0)')};
+  transition:
+    opacity 280ms ease,
+    transform 280ms ease;
 `;
 
 const TopRow = styled.div`
@@ -271,7 +276,7 @@ export default function CartLine({
   const variant = isDone ? 'done' : isError ? 'error' : 'normal';
 
   return (
-    <Wrapper $variant={variant}>
+    <Wrapper $variant={variant} $fading={Boolean(line.fading)}>
       <TopRow>
         <TitleBlock>
           <Title>
@@ -431,6 +436,7 @@ CartLine.propTypes = {
     quantity: PropTypes.number.isRequired,
     status: PropTypes.oneOf(['pending', 'submitting', 'done', 'error'])
       .isRequired,
+    fading: PropTypes.bool,
     error: PropTypes.shape({
       code: PropTypes.string,
       message: PropTypes.string,

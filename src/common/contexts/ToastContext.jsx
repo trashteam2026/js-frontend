@@ -48,7 +48,12 @@ const ToastCard = styled.div`
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(24, 39, 75, 0.18);
   border-left: 4px solid
-    ${({ $variant }) => ($variant === 'error' ? '#c0392b' : '#2c5e95')};
+    ${({ $variant }) =>
+      $variant === 'error'
+        ? '#c0392b'
+        : $variant === 'success'
+          ? '#16a34a'
+          : '#2c5e95'};
   padding: 12px 14px;
   animation: ${slideIn} 0.18s ease;
 `;

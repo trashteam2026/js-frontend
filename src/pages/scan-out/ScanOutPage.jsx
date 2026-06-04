@@ -14,9 +14,17 @@ const NAVY = '#2a4d8f';
 const NAVY_DARK = '#1a2b4a';
 const REMOVED_RED = '#ef4444';
 const SUCCESS_GREEN = '#16a34a';
+// Shared confirmation card surface — kept identical to ScanInPage's confirmation
+// card so both scanners feel like one system (soft pale blue, dark navy text).
+const CONFIRM_BG = '#c9d6e8';
+const CONFIRM_BG_HOVER = '#b8c8de';
 
 const PageWrapper = styled.div`
+  /* dvh tracks the *visible* viewport on mobile (collapsing browser chrome), so
+     the in-flow footer at the bottom of the cart column is always reachable —
+     100vh would overshoot and push it under the chrome. */
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: #ececec;
@@ -25,7 +33,12 @@ const PageWrapper = styled.div`
 const Content = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: ${(p) => (p.$isMobile ? '1fr' : '1fr 1fr')};
+  /* minmax(0, 1fr) (not bare 1fr === minmax(auto, 1fr)) lets the tracks shrink
+     below their content's min-content, so a wide child can't push a Panel past
+     the viewport and get clipped by overflow:hidden — same guard OwnerHeader
+     uses. */
+  grid-template-columns: ${(p) =>
+    p.$isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) minmax(0, 1fr)'};
   grid-template-rows: ${(p) => (p.$isMobile ? 'auto 1fr' : '1fr')};
   gap: 16px;
   padding: 16px 24px 24px;
@@ -46,19 +59,13 @@ const Panel = styled.div`
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  /* Grid items default to min-width:auto; without this the Panel can't shrink
+     below its content and would overflow the track. */
+  min-width: 0;
 
   @media (max-width: 767px) {
     padding: 12px;
     gap: 10px;
-  }
-`;
-
-// Cart panel only: on mobile it's the 1fr grid row, so it stretches to the
-// bottom and runs behind the floating footer. Lift its bottom edge clear of
-// the footer so there's visible empty space beneath the white Cart box.
-const CartPanel = styled(Panel)`
-  @media (max-width: 767px) {
-    margin-bottom: 80px;
   }
 `;
 
@@ -77,6 +84,7 @@ const ScannerBody = styled.div`
   justify-content: center;
   gap: 12px;
   min-height: 0;
+  min-width: 0;
 
   @media (max-width: 767px) {
     justify-content: flex-start;
@@ -188,6 +196,7 @@ const CartHeader = styled.div`
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 `;
 
 const CartSummary = styled.span`
@@ -195,6 +204,9 @@ const CartSummary = styled.span`
   color: #6b7280;
 `;
 
+// The cart is the scrolling region of the Cart panel's flex column; it flexes to
+// fill the space above the in-flow Footer, so the last item naturally ends above
+// the footer with no reserved pixels.
 const CartList = styled.div`
   flex: 1;
   min-height: 0;
@@ -203,10 +215,6 @@ const CartList = styled.div`
   flex-direction: column;
   gap: 10px;
   padding-right: 4px;
-
-  @media (max-width: 767px) {
-    padding-bottom: 88px;
-  }
 `;
 
 const EmptyCart = styled.p`
@@ -216,25 +224,25 @@ const EmptyCart = styled.p`
   margin: 32px 0;
 `;
 
+// The footer lives in the Cart panel's flex column as a non-shrinking flow
+// element below the scrolling CartList — same stacking context as the cart, so
+// it owns its own space and the cart ends above it. It reads as a bottom band
+// belonging to the panel: the border-top is the only separation (same as
+// desktop), with no elevated-card shadow/border/radius now that it's in flow.
 const Footer = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-shrink: 0;
+  min-width: 0;
   padding-top: 8px;
   border-top: 1px solid #e8ecf2;
 
   @media (max-width: 767px) {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: 16px;
-    z-index: 30;
-    padding: 10px 14px;
-    background: #ffffff;
-    border: 1px solid #e8ecf2;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(24, 39, 75, 0.16);
+    /* In-flow band inside the Panel's own padding — only vertical padding
+       (plus safe-area) is needed; horizontal alignment comes from the Panel. */
+    padding: 10px 0 env(safe-area-inset-bottom, 0px);
   }
 `;
 
@@ -274,34 +282,58 @@ const SubmitButton = styled.button`
   }
 `;
 
-const ConfirmationOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  background: rgba(22, 163, 74, 0.94);
-  color: #ffffff;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  z-index: 5;
-  text-align: center;
-  padding: 20px;
+// ─── Scan confirmation card (rendered in the scanner region, mirrors ScanInPage)
+// Tappable so a scan can be acknowledged early; otherwise it auto-returns after
+// the shared hold. Visuals are kept identical to ScanInPage's confirmation card.
+const ConfirmCard = styled.button`
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 16px;
+  background-color: ${CONFIRM_BG};
+  color: ${NAVY_DARK};
+  border: none;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
 
-  @media (max-width: 767px) {
-    position: fixed;
-    border-radius: 0;
-    z-index: 40;
+  &:hover {
+    background-color: ${CONFIRM_BG_HOVER};
   }
 `;
 
-const ConfirmationHeading = styled.div`
-  font-size: 22px;
-  font-weight: 700;
+const ConfirmHeading = styled.span`
+  font-size: 1rem;
+  font-weight: 600;
 `;
 
-const ConfirmationDetail = styled.div`
-  font-size: 14px;
-  margin-top: 8px;
-  opacity: 0.95;
+const ConfirmDetail = styled.span`
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+`;
+
+// Long item names shrink and ellipsize (the card padding is the breathing room)
+// instead of overflowing the card — matches ScanInPage's confirmation name.
+const ConfirmItemName = styled.span`
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ConfirmHint = styled.span`
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 4px;
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -314,6 +346,15 @@ const makeLineId = () =>
 const MIN_BARCODE_LEN = 6;
 const SCAN_DEBOUNCE_MS = 1500;
 
+// A line that reaches 'done' holds its "Removed" confirmation this long, then
+// fades out (FADE_MS) before being dropped from the cart individually.
+const REMOVED_HOLD_MS = 1500;
+const FADE_MS = 280; // must match the Wrapper opacity/transform transition in CartLine
+
+// How long the in-scanner scan confirmation holds before auto-returning to
+// ready-to-scan. Kept identical to ScanInPage's confirmation hold.
+const CONFIRM_HOLD_MS = 1000;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ScanOutPage() {
@@ -322,25 +363,74 @@ export default function ScanOutPage() {
   const [items, setItems] = useState([]);
   const [lines, setLines] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmation, setConfirmation] = useState(null);
   const [globalError, setGlobalError] = useState('');
   const [lastScan, setLastScan] = useState(null);
+  // In-scanner scan confirmation (mirrors ScanInPage). null = ready to scan;
+  // otherwise { name, known, barcode } and the scanner region shows the card.
+  const [confirmation, setConfirmation] = useState(null);
 
   const [cameraStatus, setCameraStatus] = useState('starting');
   const [cameraError, setCameraError] = useState('');
 
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
-  const confirmationTimerRef = useRef(null);
+  // Set while a confirmation is held so a stray detection (mobile) or wedge
+  // keystroke (desktop) can't register a second scan mid-hold.
+  const scanLockedRef = useRef(false);
+
+  // Per-line fade/removal bookkeeping. scheduledRef guards against
+  // double-scheduling the same 'done' line; removalTimersRef holds the live
+  // timers so they can be cleared on unmount.
+  const scheduledRef = useRef(new Set());
+  const removalTimersRef = useRef(new Map());
 
   useEffect(
     () => () => {
-      if (confirmationTimerRef.current) {
-        clearTimeout(confirmationTimerRef.current);
-      }
+      removalTimersRef.current.forEach((timers) =>
+        timers.forEach((t) => clearTimeout(t))
+      );
+      removalTimersRef.current.clear();
+      scheduledRef.current.clear();
     },
     []
   );
+
+  // ── Per-line auto-removal: each line that reaches 'done' shows its "Removed"
+  //    confirmation briefly, then fades out and is dropped individually —
+  //    independent of whether sibling lines succeeded or errored. Error/pending
+  //    lines are left untouched for the user to handle.
+  useEffect(() => {
+    lines.forEach((line) => {
+      if (line.status !== 'done' || scheduledRef.current.has(line.id)) return;
+      scheduledRef.current.add(line.id);
+
+      const fadeTimer = setTimeout(() => {
+        // Trigger the CSS fade.
+        setLines((prev) =>
+          prev.map((l) => (l.id === line.id ? { ...l, fading: true } : l))
+        );
+        const removeTimer = setTimeout(() => {
+          setLines((prev) => prev.filter((l) => l.id !== line.id));
+          scheduledRef.current.delete(line.id);
+          removalTimersRef.current.delete(line.id);
+        }, FADE_MS);
+        removalTimersRef.current.set(line.id, [removeTimer]);
+      }, REMOVED_HOLD_MS);
+
+      removalTimersRef.current.set(line.id, [fadeTimer]);
+    });
+  }, [lines]);
+
+  // ── Hold the scan confirmation briefly, then auto-return to ready-to-scan and
+  //    release the scan lock (mirrors ScanInPage's auto-dismiss).
+  useEffect(() => {
+    if (!confirmation) return undefined;
+    const timer = setTimeout(() => {
+      setConfirmation(null);
+      scanLockedRef.current = false;
+    }, CONFIRM_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [confirmation]);
 
   // ── Load catalog (for manual-pick autocomplete) ────────────────────────────
   useEffect(() => {
@@ -359,6 +449,8 @@ export default function ScanOutPage() {
   // ── Scan ingestion ─────────────────────────────────────────────────────────
   const handleScan = useCallback(
     (rawBarcode) => {
+      // Ignore detections/keystrokes while a confirmation is being held.
+      if (scanLockedRef.current) return;
       const barcode = String(rawBarcode || '').trim();
       if (!barcode) return;
 
@@ -369,6 +461,16 @@ export default function ScanOutPage() {
       // A truly unknown barcode stays nameless and falls through to the
       // existing BARCODE_NOT_FOUND manual-pick flow on submit.
       const match = items.find((it) => it.barcode === barcode);
+
+      // Acknowledge the scan in the scanner region (mirrors ScanInPage): pause
+      // scanning and show the item name, or a clear not-in-catalog message,
+      // then auto-return. The cart line is still added/bumped below as before.
+      scanLockedRef.current = true;
+      setConfirmation({
+        name: match?.name ?? null,
+        known: Boolean(match),
+        barcode,
+      });
 
       setLines((prev) => {
         // Match an existing editable line by the same barcode so re-scans
@@ -417,9 +519,17 @@ export default function ScanOutPage() {
     handleScanRef.current = handleScan;
   }, [handleScan]);
 
+  // Tapping the confirmation returns to the scanner early (mirrors ScanInPage).
+  const handleConfirmationTap = useCallback(() => {
+    setConfirmation(null);
+    scanLockedRef.current = false;
+  }, []);
+
   // ── Mobile: camera (mirrors ScanInPage cleanup, with continuous detection) ─
+  //    While a confirmation is held we tear the camera down and render the card
+  //    in the scanner's place (as ScanInPage does), then restart on return.
   useEffect(() => {
-    if (!isMobile) return undefined;
+    if (!isMobile || confirmation) return undefined;
 
     let cancelled = false;
     let localControls = null;
@@ -509,7 +619,7 @@ export default function ScanOutPage() {
         video.srcObject = null;
       }
     };
-  }, [isMobile]);
+  }, [isMobile, confirmation]);
 
   // ── Desktop: USB barcode scanner (keyboard-wedge) ──────────────────────────
   useEffect(() => {
@@ -610,7 +720,6 @@ export default function ScanOutPage() {
     // the UI layer (submit button disabled), but we still iterate the
     // snapshot to avoid any interleaving surprises.
     const snapshot = lines;
-    let allSucceededInThisPass = true;
     let aborted = false;
 
     try {
@@ -618,7 +727,6 @@ export default function ScanOutPage() {
         if (line.status === 'done') continue;
         if (line.status === 'error') {
           // User hasn't resolved this; halt so they can act on it.
-          allSucceededInThisPass = false;
           break;
         }
 
@@ -647,7 +755,6 @@ export default function ScanOutPage() {
             )
           );
         } catch (err) {
-          allSucceededInThisPass = false;
           let errorObj;
           if (err.status === 404 && err.code === 'BARCODE_NOT_FOUND') {
             errorObj = { code: 'BARCODE_NOT_FOUND' };
@@ -692,23 +799,9 @@ export default function ScanOutPage() {
       setSubmitting(false);
     }
 
-    // If every line is now 'done', briefly show a confirmation banner then
-    // clear the cart and return to a fresh scanning state.
-    if (allSucceededInThisPass) {
-      setLines((current) => {
-        if (current.length > 0 && current.every((l) => l.status === 'done')) {
-          const totalUnits = current.reduce((sum, l) => sum + l.quantity, 0);
-          setConfirmation({ items: current.length, units: totalUnits });
-          confirmationTimerRef.current = setTimeout(() => {
-            setLines([]);
-            setConfirmation(null);
-            setLastScan(null);
-            confirmationTimerRef.current = null;
-          }, 2200);
-        }
-        return current;
-      });
-    }
+    // Each line that reached 'done' is now picked up by the per-line fade
+    // effect, which shows its "Removed" state briefly and then drops it from
+    // the cart individually — no all-or-nothing bulk clear.
   }, [submitting, lines]);
 
   const submitDisabled =
@@ -726,7 +819,32 @@ export default function ScanOutPage() {
         <Panel>
           <PanelTitle>Scanner</PanelTitle>
           <ScannerBody>
-            {isMobile ? (
+            {confirmation ? (
+              <ConfirmCard
+                type='button'
+                onClick={handleConfirmationTap}
+                aria-label='Continue scanning'
+              >
+                {confirmation.known ? (
+                  <>
+                    <ConfirmHeading>Added to cart</ConfirmHeading>
+                    <ConfirmDetail>
+                      <ConfirmItemName>{confirmation.name}</ConfirmItemName>
+                    </ConfirmDetail>
+                  </>
+                ) : (
+                  <>
+                    <ConfirmHeading>Not in catalog</ConfirmHeading>
+                    <ConfirmDetail>
+                      <ConfirmItemName>
+                        Barcode {confirmation.barcode}
+                      </ConfirmItemName>
+                    </ConfirmDetail>
+                  </>
+                )}
+                <ConfirmHint>Tap to scan another</ConfirmHint>
+              </ConfirmCard>
+            ) : isMobile ? (
               <>
                 <CameraFrame>
                   <Video ref={videoRef} autoPlay playsInline muted />
@@ -753,7 +871,7 @@ export default function ScanOutPage() {
                 </ScannerSubHint>
               </>
             )}
-            {lastScan && (
+            {lastScan && !confirmation && (
               <LastScanRow>
                 Last scan: <LastScanCode>{lastScan.barcode}</LastScanCode>
               </LastScanRow>
@@ -761,7 +879,7 @@ export default function ScanOutPage() {
           </ScannerBody>
         </Panel>
 
-        <CartPanel style={{ position: 'relative' }}>
+        <Panel>
           <CartHeader>
             <PanelTitle>Cart</PanelTitle>
             <CartSummary>
@@ -802,21 +920,7 @@ export default function ScanOutPage() {
               {submitting ? 'Removing…' : 'Complete Checkout'}
             </SubmitButton>
           </Footer>
-
-          {confirmation && (
-            <ConfirmationOverlay>
-              <div>
-                <ConfirmationHeading>Checkout complete</ConfirmationHeading>
-                <ConfirmationDetail>
-                  {confirmation.items}{' '}
-                  {confirmation.items === 1 ? 'item' : 'items'} ·{' '}
-                  {confirmation.units}{' '}
-                  {confirmation.units === 1 ? 'unit' : 'units'} removed
-                </ConfirmationDetail>
-              </div>
-            </ConfirmationOverlay>
-          )}
-        </CartPanel>
+        </Panel>
       </Content>
     </PageWrapper>
   );

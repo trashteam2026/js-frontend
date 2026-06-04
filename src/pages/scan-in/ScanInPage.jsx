@@ -192,11 +192,13 @@ const FinishButton = styled(SecondaryButton)`
   }
 `;
 
+// Soft pale blue surface, shared with ScanOutPage's confirmation card so both
+// scanners' confirmations look identical (dark navy text on light blue).
 const ConfirmCard = styled.button`
   width: 100%;
   padding: 24px 16px;
-  background-color: #2a4d8f;
-  color: #ffffff;
+  background-color: #c9d6e8;
+  color: #1a2b4a;
   border: none;
   border-radius: 14px;
   display: flex;
@@ -207,7 +209,7 @@ const ConfirmCard = styled.button`
   font-family: inherit;
 
   &:hover {
-    background-color: #1e3a6e;
+    background-color: #b8c8de;
   }
 `;
 
@@ -859,7 +861,7 @@ export default function ScanInPage() {
       setPendingBarcode(null);
       setPendingLookup(null);
       setView('camera');
-    }, 1500);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [view]);
 
