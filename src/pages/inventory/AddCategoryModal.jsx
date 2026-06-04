@@ -18,6 +18,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 24px 28px;

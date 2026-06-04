@@ -16,6 +16,7 @@ import styled from 'styled-components';
 
 import { batchesApi, itemsApi } from '../../services/api';
 import { openBarcodePrintWindow } from '../../utils/barcodePrint';
+import DeleteItemModal from './DeleteItemModal';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 28px 32px 24px;
@@ -489,6 +491,7 @@ export default function ItemDetailModal({
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [omitZeros, setOmitZeros] = useState(false);
 
@@ -816,9 +819,10 @@ export default function ItemDetailModal({
     }
   }, [itemId, fetchDetail, showToast]);
 
+  // Invoked as the in-app DeleteItemModal's onConfirm. The confirmation is
+  // gated by `confirmingDelete` state (no more window.confirm); the delete
+  // call, toasts, and onItemDeleted/onClose behavior are unchanged.
   const handleDeleteItem = useCallback(async () => {
-    if (!window.confirm(`Delete "${detail?.name}"? This cannot be undone.`))
-      return;
     try {
       await itemsApi.delete(itemId);
       // Fire the toast before onClose() unmounts this modal. The toast state
@@ -830,7 +834,7 @@ export default function ItemDetailModal({
       console.error('Delete item error:', err);
       showToast("Couldn't delete the item. Please try again.", 'error');
     }
-  }, [detail, itemId, onItemDeleted, onClose, showToast]);
+  }, [itemId, onItemDeleted, onClose, showToast]);
 
   const handlePrintBarcodes = useCallback(
     (copies) => {
@@ -1271,7 +1275,10 @@ export default function ItemDetailModal({
             <FiPrinter size={14} />
             Print Barcodes
           </PrintButton>
-          <DeleteItemButton onClick={handleDeleteItem} disabled={saving}>
+          <DeleteItemButton
+            onClick={() => setConfirmingDelete(true)}
+            disabled={saving}
+          >
             <FiTrash2 size={14} />
             Delete Item
           </DeleteItemButton>
@@ -1280,6 +1287,13 @@ export default function ItemDetailModal({
           <PrintQuantityModal
             onClose={() => setShowPrintOptions(false)}
             onPrint={handlePrintBarcodes}
+          />
+        )}
+        {confirmingDelete && (
+          <DeleteItemModal
+            itemName={detail.name}
+            onClose={() => setConfirmingDelete(false)}
+            onConfirm={handleDeleteItem}
           />
         )}
       </Modal>

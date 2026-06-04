@@ -4,6 +4,10 @@ import { FiAlertTriangle, FiX } from 'react-icons/fi';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
+// Mirrors DeleteCategoryModal's visual language. The only structural
+// difference is the z-index: this confirmation opens on top of the already-open
+// ItemDetailModal (z-index 100) and its print sub-modal (z-index 140), so its
+// overlay sits above both. The app-level toast (z-index 1000) still wins.
 const Overlay = styled.div`
   position: fixed;
   top: 0;
@@ -14,7 +18,7 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 150;
 `;
 
 const Modal = styled.div`
@@ -95,7 +99,7 @@ const WarningText = styled.p`
   line-height: 1.5;
 `;
 
-const CategoryNameStrong = styled.strong`
+const ItemNameStrong = styled.strong`
   color: #1a2b4a;
 `;
 
@@ -146,10 +150,8 @@ const DeleteButton = styled.button`
   }
 `;
 
-export default function DeleteCategoryModal({ category, onClose, onConfirm }) {
+export default function DeleteItemModal({ itemName, onClose, onConfirm }) {
   const [deleting, setDeleting] = useState(false);
-
-  const itemCount = category.items?.length ?? 0;
 
   const handleDelete = async () => {
     if (deleting) return;
@@ -165,7 +167,7 @@ export default function DeleteCategoryModal({ category, onClose, onConfirm }) {
     <Overlay onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
-          <Title>Delete Category</Title>
+          <Title>Delete Item</Title>
           <CloseButton onClick={onClose} disabled={deleting}>
             <FiX color='#ffffff' />
           </CloseButton>
@@ -178,15 +180,8 @@ export default function DeleteCategoryModal({ category, onClose, onConfirm }) {
             style={{ flexShrink: 0, marginTop: 1 }}
           />
           <WarningText>
-            Deleting <CategoryNameStrong>{category.name}</CategoryNameStrong>{' '}
-            will permanently remove{' '}
-            {itemCount === 0
-              ? 'all items'
-              : itemCount === 1
-                ? '1 item'
-                : `all ${itemCount} items`}{' '}
-            in this category and add them to the activity log. This cannot be
-            undone.
+            Delete <ItemNameStrong>&quot;{itemName}&quot;</ItemNameStrong>? This
+            cannot be undone.
           </WarningText>
         </WarningBox>
 
@@ -203,12 +198,8 @@ export default function DeleteCategoryModal({ category, onClose, onConfirm }) {
   );
 }
 
-DeleteCategoryModal.propTypes = {
-  category: PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    name: PropTypes.string.isRequired,
-    items: PropTypes.array,
-  }).isRequired,
+DeleteItemModal.propTypes = {
+  itemName: PropTypes.string,
   onClose: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
 };
