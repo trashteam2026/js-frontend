@@ -691,12 +691,14 @@ export default function ItemDetailModal({
       });
       onItemUpdated?.(updated);
       await fetchDetail();
+      showToast('Saved.', 'success');
     } catch (err) {
       console.error('Update threshold error:', err);
+      showToast("Couldn't save changes. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [thresholdInput, itemId, onItemUpdated, fetchDetail]);
+  }, [thresholdInput, itemId, onItemUpdated, fetchDetail, showToast]);
 
   const saveName = useCallback(async () => {
     const nextName = nameInput.trim();
@@ -713,12 +715,14 @@ export default function ItemDetailModal({
       setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
       onItemUpdated?.(updated);
       setEditingName(false);
+      showToast('Saved.', 'success');
     } catch (err) {
       console.error('Update item name error:', err);
+      showToast("Couldn't save changes. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [detail?.name, itemId, nameInput, onItemUpdated, saving]);
+  }, [detail?.name, itemId, nameInput, onItemUpdated, saving, showToast]);
 
   const cancelNameEdit = useCallback(() => {
     setNameInput(detail?.name || '');
@@ -740,12 +744,21 @@ export default function ItemDetailModal({
       });
       setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
       onItemUpdated?.(updated);
+      showToast('Saved.', 'success');
     } catch (err) {
       console.error('Update item category error:', err);
+      showToast("Couldn't save changes. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [categoryInput, detail?.category_id, itemId, onItemUpdated, saving]);
+  }, [
+    categoryInput,
+    detail?.category_id,
+    itemId,
+    onItemUpdated,
+    saving,
+    showToast,
+  ]);
 
   const cancelCategoryEdit = useCallback(() => {
     setCategoryInput(detail?.category_id ? String(detail.category_id) : '');
@@ -761,13 +774,15 @@ export default function ItemDetailModal({
       try {
         await batchesApi.update(itemId, batchId, { quantity: newQty });
         await fetchDetail();
+        showToast('Saved.', 'success');
       } catch (err) {
         console.error('Update batch qty error:', err);
+        showToast("Couldn't save changes. Please try again.", 'error');
       } finally {
         setSaving(false);
       }
     },
-    [batchInput, itemId, fetchDetail]
+    [batchInput, itemId, fetchDetail, showToast]
   );
 
   const handleDeleteBatch = useCallback(
@@ -776,13 +791,15 @@ export default function ItemDetailModal({
       try {
         await batchesApi.delete(itemId, batchId);
         await fetchDetail();
+        showToast('Batch deleted.', 'success');
       } catch (err) {
         console.error('Delete batch error:', err);
+        showToast("Couldn't delete the batch. Please try again.", 'error');
       } finally {
         setSaving(false);
       }
     },
-    [itemId, fetchDetail]
+    [itemId, fetchDetail, showToast]
   );
 
   const handleAddNoExpBatch = useCallback(async () => {
@@ -790,24 +807,30 @@ export default function ItemDetailModal({
     try {
       await batchesApi.create(itemId, { expiration_date: null, quantity: 0 });
       await fetchDetail();
+      showToast('Batch added.', 'success');
     } catch (err) {
       console.error('Add batch error:', err);
+      showToast("Couldn't add the batch. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [itemId, fetchDetail]);
+  }, [itemId, fetchDetail, showToast]);
 
   const handleDeleteItem = useCallback(async () => {
     if (!window.confirm(`Delete "${detail?.name}"? This cannot be undone.`))
       return;
     try {
       await itemsApi.delete(itemId);
+      // Fire the toast before onClose() unmounts this modal. The toast state
+      // lives in the app-level ToastProvider, so it survives the unmount.
+      showToast('Item deleted.', 'success');
       onItemDeleted?.(itemId);
       onClose();
     } catch (err) {
       console.error('Delete item error:', err);
+      showToast("Couldn't delete the item. Please try again.", 'error');
     }
-  }, [detail, itemId, onItemDeleted, onClose]);
+  }, [detail, itemId, onItemDeleted, onClose, showToast]);
 
   const handlePrintBarcodes = useCallback(
     (copies) => {

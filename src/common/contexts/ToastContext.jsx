@@ -7,7 +7,7 @@ import styled, { keyframes } from 'styled-components';
 
 const ToastContext = React.createContext(null);
 
-const AUTO_DISMISS_MS = 4000;
+const AUTO_DISMISS_MS = 2500;
 
 const slideIn = keyframes`
   from {

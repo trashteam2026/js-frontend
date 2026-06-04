@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiPlus } from 'react-icons/fi';
 
 import OwnerHeader from '@/common/components/navigation/OwnerHeader';
+import { useToast } from '@/common/contexts/ToastContext';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import styled from 'styled-components';
 
@@ -82,6 +83,7 @@ const UNCATEGORIZED_ID = 'uncategorized';
 
 export default function InventoryPage() {
   const isMobile = useIsMobile();
+  const { showToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -282,8 +284,10 @@ export default function InventoryPage() {
         prev.filter((i) => i.category_id !== categoryToDelete.id)
       );
       setCategoryToDelete(null);
+      showToast('Category deleted.', 'success');
     } catch (err) {
       console.error('Delete category error:', err);
+      showToast("Couldn't delete the category. Please try again.", 'error');
     }
   };
 
@@ -295,8 +299,10 @@ export default function InventoryPage() {
       });
       setCategories((prev) => [...prev, { ...newCat, items: [] }]);
       setShowAddCategory(false);
+      showToast('Category added.', 'success');
     } catch (err) {
       console.error('Add category error:', err);
+      showToast("Couldn't add the category. Please try again.", 'error');
     }
   };
 

@@ -10,6 +10,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 
+import { useToast } from '@/common/contexts/ToastContext';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -497,6 +498,7 @@ export default function CategorySection({
   readOnly = false,
 }) {
   const isMobile = useIsMobile();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -593,8 +595,10 @@ export default function CategorySection({
       onItemAdded?.(newItem);
       setAddingItem(false);
       setNewItemName('');
+      showToast('Item added.', 'success');
     } catch (err) {
       console.error('Add item error:', err);
+      showToast("Couldn't add the item. Please try again.", 'error');
     } finally {
       setSaving(false);
     }

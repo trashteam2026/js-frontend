@@ -142,16 +142,29 @@ const DoneButton = styled.button`
   &:hover {
     background: #1e3a6e;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
 export default function AddCategoryModal({ onClose, onAdd }) {
   const [name, setName] = useState('');
   const [parentGroup, setParentGroup] = useState('food');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleDone = () => {
-    if (!name.trim()) return;
-    onAdd({ name: name.trim(), parentGroup });
-    onClose();
+  // Mirror EditCategoryModal/DeleteCategoryModal: await the parent handler so
+  // the create result is known before the modal closes. The parent
+  // (handleAddCategory) appends state, closes on success, and shows the toast.
+  const handleDone = async () => {
+    if (!name.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      await onAdd({ name: name.trim(), parentGroup });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -185,7 +198,9 @@ export default function AddCategoryModal({ onClose, onAdd }) {
           </Select>
         </Field>
 
-        <DoneButton onClick={handleDone}>Add</DoneButton>
+        <DoneButton onClick={handleDone} disabled={submitting}>
+          {submitting ? 'Adding…' : 'Add'}
+        </DoneButton>
       </Modal>
     </Overlay>
   );
