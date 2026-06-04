@@ -9,12 +9,14 @@ import {
 } from 'react-icons/fi';
 
 import PrintQuantityModal from '@/common/components/PrintQuantityModal';
+import { useToast } from '@/common/contexts/ToastContext';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
 import { batchesApi, itemsApi } from '../../services/api';
 import { openBarcodePrintWindow } from '../../utils/barcodePrint';
+import DeleteItemModal from './DeleteItemModal';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 28px 32px 24px;
@@ -126,6 +129,22 @@ const InfoValue = styled.span`
   font-weight: 400;
 `;
 
+// A long label (e.g. "Low Status Count:") would otherwise overflow the row at
+// narrow widths, shrink, wrap to two lines, and leave the value/pencil floating
+// detached to the right. Allowing the row to wrap lets the value group drop to
+// the next line left-aligned instead, staying adjacent to the label.
+const WrappingInfoRow = styled(InfoRow)`
+  flex-wrap: wrap;
+`;
+
+// Keeps the value and its edit pencil together as a single wrap unit so the
+// pencil never separates from the value when the row wraps.
+const InfoValueGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const EditIcon = styled.button`
   background: none;
   border: none;
@@ -156,9 +175,9 @@ const InlineInput = styled.input`
   }
 `;
 
-const InlineSelect = styled.select`
-  min-width: 220px;
-  max-width: 100%;
+const CategorySelect = styled.select`
+  flex: 1;
+  min-width: 0;
   padding: 3px 8px;
   font-size: 15px;
   border: 1px solid #2c5e95;
@@ -482,11 +501,13 @@ export default function ItemDetailModal({
   onItemUpdated,
 }) {
   const isMobile = useIsMobile();
+  const { showToast } = useToast();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [omitZeros, setOmitZeros] = useState(false);
 
@@ -504,10 +525,6 @@ export default function ItemDetailModal({
   const [editingThreshold, setEditingThreshold] = useState(false);
   const [thresholdInput, setThresholdInput] = useState('');
   const thresholdInputRef = useRef(null);
-
-  // Category editing
-  const [editingCategory, setEditingCategory] = useState(false);
-  const [categoryInput, setCategoryInput] = useState('');
 
   // No-expiration batch qty editing
   const [editingBatchId, setEditingBatchId] = useState(null);
@@ -623,6 +640,10 @@ export default function ItemDetailModal({
     setEditingCell(null);
     setSaving(true);
 
+    // The save fires multiple sequential backend calls; if one fails mid-loop
+    // some changes commit and others don't. Track failure so we can always
+    // refetch the true DB state afterward and tell the owner the result.
+    let failed = false;
     try {
       const targetDate = `${year}-${String(month).padStart(2, '0')}-01`;
 
@@ -648,14 +669,29 @@ export default function ItemDetailModal({
           await batchesApi.delete(itemId, b.id);
         }
       }
-
-      await fetchDetail();
     } catch (err) {
       console.error('Save cell error:', err);
+      failed = true;
     } finally {
+      // Always resync with the backend — a mid-loop failure leaves the DB in a
+      // partially-updated state the optimistic grid wouldn't reflect.
+      try {
+        await fetchDetail();
+      } catch (refetchErr) {
+        console.error('Refetch after save error:', refetchErr);
+      }
       setSaving(false);
     }
-  }, [editingCell, cellInput, detail, itemId, saving, fetchDetail]);
+
+    if (failed) {
+      showToast(
+        "Some changes couldn't be saved. Please review and try again.",
+        'error'
+      );
+    } else {
+      showToast('Saved.', 'success');
+    }
+  }, [editingCell, cellInput, detail, itemId, saving, fetchDetail, showToast]);
 
   // ── Threshold save ──────────────────────────────────────────────────────────
   const saveThreshold = useCallback(async () => {
@@ -670,12 +706,14 @@ export default function ItemDetailModal({
       });
       onItemUpdated?.(updated);
       await fetchDetail();
+      showToast('Saved.', 'success');
     } catch (err) {
       console.error('Update threshold error:', err);
+      showToast("Couldn't save changes. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [thresholdInput, itemId, onItemUpdated, fetchDetail]);
+  }, [thresholdInput, itemId, onItemUpdated, fetchDetail, showToast]);
 
   const saveName = useCallback(async () => {
     const nextName = nameInput.trim();
@@ -692,44 +730,48 @@ export default function ItemDetailModal({
       setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
       onItemUpdated?.(updated);
       setEditingName(false);
+      showToast('Saved.', 'success');
     } catch (err) {
       console.error('Update item name error:', err);
+      showToast("Couldn't save changes. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [detail?.name, itemId, nameInput, onItemUpdated, saving]);
+  }, [detail?.name, itemId, nameInput, onItemUpdated, saving, showToast]);
 
   const cancelNameEdit = useCallback(() => {
     setNameInput(detail?.name || '');
     setEditingName(false);
   }, [detail?.name]);
 
-  const saveCategory = useCallback(async () => {
-    const nextCategoryId =
-      categoryInput === '' ? null : Number.parseInt(categoryInput, 10);
-    const currentCategoryId = detail?.category_id || null;
+  // Saves immediately when the category dropdown changes. The new id is read
+  // straight from the change event (not from state) so we never act on a stale
+  // value, then mapped '' -> null else parseInt before hitting the API.
+  const saveCategory = useCallback(
+    async (rawValue) => {
+      const nextCategoryId =
+        rawValue === '' ? null : Number.parseInt(rawValue, 10);
+      const currentCategoryId = detail?.category_id ?? null;
 
-    setEditingCategory(false);
-    if (nextCategoryId === currentCategoryId || saving) return;
+      if (nextCategoryId === currentCategoryId || saving) return;
 
-    setSaving(true);
-    try {
-      const updated = await itemsApi.update(itemId, {
-        category_id: nextCategoryId,
-      });
-      setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
-      onItemUpdated?.(updated);
-    } catch (err) {
-      console.error('Update item category error:', err);
-    } finally {
-      setSaving(false);
-    }
-  }, [categoryInput, detail?.category_id, itemId, onItemUpdated, saving]);
-
-  const cancelCategoryEdit = useCallback(() => {
-    setCategoryInput(detail?.category_id ? String(detail.category_id) : '');
-    setEditingCategory(false);
-  }, [detail?.category_id]);
+      setSaving(true);
+      try {
+        const updated = await itemsApi.update(itemId, {
+          category_id: nextCategoryId,
+        });
+        setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
+        onItemUpdated?.(updated);
+        showToast('Saved.', 'success');
+      } catch (err) {
+        console.error('Update item category error:', err);
+        showToast("Couldn't save changes. Please try again.", 'error');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [detail?.category_id, itemId, onItemUpdated, saving, showToast]
+  );
 
   // ── No-exp batch qty save ───────────────────────────────────────────────────
   const saveBatchQty = useCallback(
@@ -740,13 +782,15 @@ export default function ItemDetailModal({
       try {
         await batchesApi.update(itemId, batchId, { quantity: newQty });
         await fetchDetail();
+        showToast('Saved.', 'success');
       } catch (err) {
         console.error('Update batch qty error:', err);
+        showToast("Couldn't save changes. Please try again.", 'error');
       } finally {
         setSaving(false);
       }
     },
-    [batchInput, itemId, fetchDetail]
+    [batchInput, itemId, fetchDetail, showToast]
   );
 
   const handleDeleteBatch = useCallback(
@@ -755,13 +799,15 @@ export default function ItemDetailModal({
       try {
         await batchesApi.delete(itemId, batchId);
         await fetchDetail();
+        showToast('Batch deleted.', 'success');
       } catch (err) {
         console.error('Delete batch error:', err);
+        showToast("Couldn't delete the batch. Please try again.", 'error');
       } finally {
         setSaving(false);
       }
     },
-    [itemId, fetchDetail]
+    [itemId, fetchDetail, showToast]
   );
 
   const handleAddNoExpBatch = useCallback(async () => {
@@ -769,24 +815,31 @@ export default function ItemDetailModal({
     try {
       await batchesApi.create(itemId, { expiration_date: null, quantity: 0 });
       await fetchDetail();
+      showToast('Batch added.', 'success');
     } catch (err) {
       console.error('Add batch error:', err);
+      showToast("Couldn't add the batch. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
-  }, [itemId, fetchDetail]);
+  }, [itemId, fetchDetail, showToast]);
 
+  // Invoked as the in-app DeleteItemModal's onConfirm. The confirmation is
+  // gated by `confirmingDelete` state (no more window.confirm); the delete
+  // call, toasts, and onItemDeleted/onClose behavior are unchanged.
   const handleDeleteItem = useCallback(async () => {
-    if (!window.confirm(`Delete "${detail?.name}"? This cannot be undone.`))
-      return;
     try {
       await itemsApi.delete(itemId);
+      // Fire the toast before onClose() unmounts this modal. The toast state
+      // lives in the app-level ToastProvider, so it survives the unmount.
+      showToast('Item deleted.', 'success');
       onItemDeleted?.(itemId);
       onClose();
     } catch (err) {
       console.error('Delete item error:', err);
+      showToast("Couldn't delete the item. Please try again.", 'error');
     }
-  }, [detail, itemId, onItemDeleted, onClose]);
+  }, [itemId, onItemDeleted, onClose, showToast]);
 
   const handlePrintBarcodes = useCallback(
     (copies) => {
@@ -804,6 +857,16 @@ export default function ItemDetailModal({
   );
 
   // ─── Render ─────────────────────────────────────────────────────────────────
+
+  // Drive the category <select> from the item's current category. When the id
+  // is null or doesn't match any known category, fall back to '' so the select
+  // shows the non-selectable placeholder rather than silently displaying the
+  // first category as if it were chosen.
+  const currentCategoryId = detail?.category_id ?? null;
+  const categoryMatched = categories.some((c) => c.id === currentCategoryId);
+  const selectedCategoryValue = categoryMatched
+    ? String(currentCategoryId)
+    : '';
 
   if (loading) {
     return (
@@ -892,57 +955,22 @@ export default function ItemDetailModal({
 
         <InfoRow>
           <InfoLabel>Category:</InfoLabel>
-          {editingCategory ? (
-            <>
-              <InlineSelect
-                value={categoryInput}
-                disabled={saving}
-                onChange={(e) => setCategoryInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveCategory();
-                  if (e.key === 'Escape') cancelCategoryEdit();
-                }}
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </InlineSelect>
-              <EditIcon
-                type='button'
-                title='Save category'
-                onClick={saveCategory}
-                disabled={saving}
-              >
-                <FiCheck size={14} />
-              </EditIcon>
-              <EditIcon
-                type='button'
-                title='Cancel category edit'
-                onClick={cancelCategoryEdit}
-                disabled={saving}
-              >
-                <FiX size={14} />
-              </EditIcon>
-            </>
-          ) : (
-            <>
-              <InfoValue>{detail.category_name || 'Uncategorized'}</InfoValue>
-              <EditIcon
-                type='button'
-                title='Edit category'
-                onClick={() => {
-                  setCategoryInput(
-                    detail.category_id ? String(detail.category_id) : ''
-                  );
-                  setEditingCategory(true);
-                }}
-              >
-                <FiEdit2 size={14} />
-              </EditIcon>
-            </>
-          )}
+          <CategorySelect
+            value={selectedCategoryValue}
+            disabled={saving}
+            onChange={(e) => saveCategory(e.target.value)}
+          >
+            {!categoryMatched && (
+              <option value='' disabled hidden>
+                Select a category…
+              </option>
+            )}
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </CategorySelect>
         </InfoRow>
 
         <InfoRow>
@@ -950,7 +978,7 @@ export default function ItemDetailModal({
           <InfoValue>{detail.total_quantity}</InfoValue>
         </InfoRow>
 
-        <InfoRow>
+        <WrappingInfoRow>
           <InfoLabel>Low Status Count:</InfoLabel>
           {editingThreshold ? (
             <InlineInput
@@ -966,7 +994,7 @@ export default function ItemDetailModal({
               }}
             />
           ) : (
-            <>
+            <InfoValueGroup>
               <InfoValue>{detail.low_stock_threshold}</InfoValue>
               <EditIcon
                 title='Edit threshold'
@@ -977,9 +1005,9 @@ export default function ItemDetailModal({
               >
                 <FiEdit2 size={14} />
               </EditIcon>
-            </>
+            </InfoValueGroup>
           )}
-        </InfoRow>
+        </WrappingInfoRow>
 
         {/* ── Expiration date grid ── */}
         <ExpirationSection>
@@ -1227,7 +1255,10 @@ export default function ItemDetailModal({
             <FiPrinter size={14} />
             Print Barcodes
           </PrintButton>
-          <DeleteItemButton onClick={handleDeleteItem} disabled={saving}>
+          <DeleteItemButton
+            onClick={() => setConfirmingDelete(true)}
+            disabled={saving}
+          >
             <FiTrash2 size={14} />
             Delete Item
           </DeleteItemButton>
@@ -1236,6 +1267,13 @@ export default function ItemDetailModal({
           <PrintQuantityModal
             onClose={() => setShowPrintOptions(false)}
             onPrint={handlePrintBarcodes}
+          />
+        )}
+        {confirmingDelete && (
+          <DeleteItemModal
+            itemName={detail.name}
+            onClose={() => setConfirmingDelete(false)}
+            onConfirm={handleDeleteItem}
           />
         )}
       </Modal>

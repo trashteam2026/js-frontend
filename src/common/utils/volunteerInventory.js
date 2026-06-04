@@ -1,10 +1,9 @@
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import { auth } from '@/firebase-config';
-import { MOCK_CATEGORIES } from '@/pages/inventory/mockData';
 
 const STORAGE_KEY = 'pantry_volunteer_added_items';
 
-const buildUrl = (endpoint) =>
-  `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}${endpoint}`;
+const buildUrl = (endpoint) => `${getBackendUrl()}${endpoint}`;
 
 function readAll() {
   try {
@@ -149,11 +148,13 @@ export async function addItem({
 }
 
 export function getAllItemNames(categories = null) {
-  const source = Array.isArray(categories) ? categories : MOCK_CATEGORIES;
+  // No mock fallback: if categories failed to load (non-array), surface nothing
+  // so the calling UI shows its empty/error state rather than fake inventory.
+  if (!Array.isArray(categories)) return [];
   const seen = new Set();
   const names = [];
-  for (const cat of source) {
-    for (const item of cat.items) {
+  for (const cat of categories) {
+    for (const item of cat.items || []) {
       if (!seen.has(item.name)) {
         seen.add(item.name);
         names.push(item.name);
@@ -164,23 +165,19 @@ export function getAllItemNames(categories = null) {
 }
 
 export function getAllCategoryNames(categories = null) {
-  const source = Array.isArray(categories)
-    ? categories
-    : MOCK_CATEGORIES.map((category) => ({ name: category.name }));
-
-  return source
+  if (!Array.isArray(categories)) return [];
+  return categories
     .map((category) => category.name)
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 }
 
 export function findCategoryForItem(itemName, categories = null) {
-  if (!itemName) return null;
+  if (!itemName || !Array.isArray(categories)) return null;
   const target = itemName.trim().toLowerCase();
-  const source = Array.isArray(categories) ? categories : MOCK_CATEGORIES;
 
-  for (const cat of source) {
-    if (cat.items.some((item) => item.name.toLowerCase() === target)) {
+  for (const cat of categories) {
+    if ((cat.items || []).some((item) => item.name.toLowerCase() === target)) {
       return cat.name;
     }
   }

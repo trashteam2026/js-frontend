@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaBarcode } from 'react-icons/fa';
-import { FiSearch, FiUser, FiUsers } from 'react-icons/fi';
+import { FiUser, FiUsers } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
@@ -12,8 +12,11 @@ import VolunteerCodeModal from '@/pages/inventory/VolunteerCodeModal';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 
-const DESKTOP_SEARCH_COMFORT_WIDTH = 455;
-const DESKTOP_SEARCH_COMFORT_GAP = 32;
+// The inline search occupies the center grid track, which is minmax(180px,
+// 455px). Because the side tracks are flexible (1fr) they shrink before the
+// fixed-max center does, so inline the search renders at its 455px max — that
+// is the width to budget when deciding whether everything still fits on one row.
+const DESKTOP_SEARCH_MAX_WIDTH = 455;
 
 // ─── Styled components ────────────────────────────────────────────────────────
 //
@@ -50,13 +53,16 @@ const TopBar = styled.div`
 const BrandGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
+  /* Gap only collapses once the title is actually hidden (logo alone on the
+     row). While the title is still visible — even after the search has
+     stacked — keep the normal logo↔title gap. */
+  gap: ${({ $titleHidden }) => ($titleHidden ? 0 : '14px')};
   min-width: 0;
   justify-self: start;
   flex: ${({ $stacked }) => ($stacked ? '0 1 auto' : 'initial')};
 
   @media (max-width: 767px) {
-    gap: 8px;
+    gap: ${({ $titleHidden }) => ($titleHidden ? 0 : '8px')};
   }
 `;
 
@@ -78,13 +84,17 @@ const DesktopTitle = styled.h1`
   color: #111827;
   margin: 0;
   min-width: 0;
+  max-width: ${({ $hidden }) => ($hidden ? 0 : 'none')};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1;
   cursor: pointer;
+  opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
+  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
+  pointer-events: ${({ $hidden }) => ($hidden ? 'none' : 'auto')};
 
-  @media (max-width: 1279px) {
+  @media (max-width: 767px) {
     display: none;
   }
 `;
@@ -92,10 +102,11 @@ const DesktopTitle = styled.h1`
 const MobileTitle = styled.h1`
   display: none;
 
-  @media (max-width: 1279px) {
+  @media (max-width: 767px) {
     display: block;
     margin: 0;
     min-width: 0;
+    max-width: ${({ $hidden }) => ($hidden ? 0 : 'none')};
     font-size: 16px;
     font-weight: 700;
     color: #111827;
@@ -104,6 +115,9 @@ const MobileTitle = styled.h1`
     text-overflow: ellipsis;
     line-height: 1;
     cursor: pointer;
+    opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
+    visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
+    pointer-events: ${({ $hidden }) => ($hidden ? 'none' : 'auto')};
   }
 `;
 
@@ -151,31 +165,6 @@ const SearchInput = styled.input`
   &::placeholder {
     color: #4b5563;
     opacity: 1;
-  }
-`;
-
-const SearchButton = styled.button`
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 9999px;
-  background: #2c5e95;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  svg {
-    color: #ffffff;
-    stroke: #ffffff;
-    fill: none;
-  }
-
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    stroke: #ffffff;
   }
 `;
 
@@ -316,8 +305,12 @@ export default function OwnerHeader({
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const [stackSearch, setStackSearch] = useState(false);
+  const [hideTitle, setHideTitle] = useState(false);
   const topBarRef = useRef(null);
   const brandRef = useRef(null);
+  const logoRef = useRef(null);
+  const desktopTitleRef = useRef(null);
+  const mobileTitleRef = useRef(null);
   const navRef = useRef(null);
   const profileWrapperRef = useRef(null);
 
@@ -336,11 +329,6 @@ export default function OwnerHeader({
   }, [showProfileDropdown]);
 
   useEffect(() => {
-    if (!showSearch) {
-      setStackSearch(false);
-      return undefined;
-    }
-
     const updateStacking = () => {
       const topBar = topBarRef.current;
       const brand = brandRef.current;
@@ -353,12 +341,51 @@ export default function OwnerHeader({
         Number.parseFloat(styles.paddingRight || '0');
       const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
       const available = topBar.clientWidth - paddingX;
-      const maxSideWidth = Math.max(brand.scrollWidth, nav.scrollWidth);
-      const comfortableGap = Math.max(gap, DESKTOP_SEARCH_COMFORT_GAP);
-      const required =
-        maxSideWidth * 2 + DESKTOP_SEARCH_COMFORT_WIDTH + comfortableGap * 2;
+      const brandStyles = window.getComputedStyle(brand);
+      const brandGap =
+        Number.parseFloat(brandStyles.columnGap || brandStyles.gap || '0') || 14;
+      const logoWidth = logoRef.current?.getBoundingClientRect().width || 0;
+      const titleNode = window.matchMedia('(min-width: 768px)').matches
+        ? desktopTitleRef.current
+        : mobileTitleRef.current;
+      const titleWidth = titleNode?.scrollWidth || 0;
+      const navWidth = nav.scrollWidth;
 
-      setStackSearch(available < required);
+      // Does the single row holding logo + title + nav fit on one line? (Includes
+      // the brand's logo↔title gap and the row gap.) When it doesn't, the title
+      // text is hidden so logo + nav stay on one row — never wrapping to a second
+      // line nor ellipsizing the title. This is the only collision on pages
+      // without a search bar (Volunteers, Scan Out), and step 2 below for pages
+      // with one (Inventory).
+      const remainingRowRequired =
+        logoWidth + brandGap + titleWidth + gap + navWidth;
+      const titleFits = available >= remainingRowRequired;
+
+      if (!showSearch) {
+        setStackSearch(false);
+        setHideTitle(!titleFits);
+        return;
+      }
+
+      // Step 1 — stack the search onto its own full-width second row when the
+      // inline three-track layout (brand + centered search + nav) can no longer
+      // hold all three without the search overlapping the nav. The center track
+      // is centered, so its two flexible side tracks are forced equal: each gets
+      // (available - searchWidth - 2*gap) / 2, and the wider side overflows once
+      // that drops below its content. Budget the search's real inline width
+      // (455, its max) — not its 180 min — or the nav starts overlapping the
+      // search ~275px before the row actually stacks. The <=767px rule forces it.
+      const brandWidth =
+        logoWidth + (titleWidth > 0 ? brandGap + titleWidth : 0);
+      const maxSideWidth = Math.max(brandWidth, navWidth);
+      const required = maxSideWidth * 2 + DESKTOP_SEARCH_MAX_WIDTH + gap * 2;
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      const nextStackSearch = isMobile || available < required;
+
+      // Step 2 — only once the search has stacked, hide the title if the
+      // remaining single row (logo + title + nav) still cannot fit on one line.
+      setStackSearch(nextStackSearch);
+      setHideTitle(nextStackSearch && !titleFits);
     };
 
     updateStacking();
@@ -380,14 +407,29 @@ export default function OwnerHeader({
   return (
     <>
       <TopBar ref={topBarRef} $hasSearch={showSearch} $stacked={stackSearch}>
-        <BrandGroup ref={brandRef} $stacked={stackSearch}>
+        <BrandGroup ref={brandRef} $stacked={stackSearch} $titleHidden={hideTitle}>
           <LogoImg
+            ref={logoRef}
             src={PantryLogo}
             alt='New Trier Township'
             onClick={go('/inventory')}
           />
-          <DesktopTitle onClick={go('/inventory')}>{title}</DesktopTitle>
-          <MobileTitle onClick={go('/inventory')}>{mobileTitle}</MobileTitle>
+          <DesktopTitle
+            ref={desktopTitleRef}
+            $hidden={hideTitle}
+            aria-hidden={hideTitle}
+            onClick={go('/inventory')}
+          >
+            {title}
+          </DesktopTitle>
+          <MobileTitle
+            ref={mobileTitleRef}
+            $hidden={hideTitle}
+            aria-hidden={hideTitle}
+            onClick={go('/inventory')}
+          >
+            {mobileTitle}
+          </MobileTitle>
         </BrandGroup>
 
         {showSearch && (
@@ -399,9 +441,6 @@ export default function OwnerHeader({
                 value={searchValue}
                 onChange={(e) => onSearchChange?.(e.target.value)}
               />
-              <SearchButton type='button' title='Search'>
-                <FiSearch size={21} color='#ffffff' />
-              </SearchButton>
             </SearchPill>
           </SearchWrapper>
         )}

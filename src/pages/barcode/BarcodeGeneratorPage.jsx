@@ -318,7 +318,7 @@ export default function BarcodeGeneratorPage() {
           <HeaderIcon>
             <FaBarcode size={28} />
           </HeaderIcon>
-          <Title as='h2'>Create Internal Barcode</Title>
+          <Title as='h2'>Create Barcode</Title>
         </HeaderRow>
 
         <Form onSubmit={handleSubmit}>

@@ -10,6 +10,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 
+import { useToast } from '@/common/contexts/ToastContext';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -178,15 +179,25 @@ const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 `;
 
 const SortModal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 24px 28px;
-  width: min(360px, calc(100vw - 24px));
+  width: min(360px, 100%);
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (max-width: 767px) {
+    padding: 20px;
+  }
 `;
 
 const ModalHeader = styled.div`
@@ -380,6 +391,30 @@ const AddItemRow = styled.div`
   min-height: 36px;
 `;
 
+// Editing variant mirrors ItemRow's column grid so the input lines up with the
+// item-name column and the Add/✕ controls sit in the quantity column, with the
+// vertical divider on the same line as the rows above.
+const AddItemEditRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 244px;
+  align-items: stretch;
+  border-top: 1px solid #d8e1ee;
+  background: #f8fafc;
+  min-height: 37px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr 88px;
+  }
+`;
+
+const AddItemControls = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-left: 1px solid #2c5e95;
+`;
+
 const AddItemButton = styled.button`
   display: flex;
   align-items: center;
@@ -398,8 +433,8 @@ const AddItemButton = styled.button`
 
 const AddItemInput = styled.input`
   flex: 1;
+  min-width: 0;
   border: none;
-  border-right: 1px solid #d8e1ee;
   background: transparent;
   font-size: 14px;
   color: #1a2b4a;
@@ -463,6 +498,7 @@ export default function CategorySection({
   readOnly = false,
 }) {
   const isMobile = useIsMobile();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(true);
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -559,8 +595,10 @@ export default function CategorySection({
       onItemAdded?.(newItem);
       setAddingItem(false);
       setNewItemName('');
+      showToast('Item added.', 'success');
     } catch (err) {
       console.error('Add item error:', err);
+      showToast("Couldn't add the item. Please try again.", 'error');
     } finally {
       setSaving(false);
     }
@@ -719,7 +757,7 @@ export default function CategorySection({
 
         {!readOnly &&
           (addingItem ? (
-            <AddItemRow>
+            <AddItemEditRow>
               <AddItemInput
                 ref={inputRef}
                 placeholder='Item name…'
@@ -730,14 +768,16 @@ export default function CategorySection({
                   if (e.key === 'Escape') cancelAdding();
                 }}
               />
-              <AddItemSave
-                onClick={handleSave}
-                disabled={!newItemName.trim() || saving}
-              >
-                Add
-              </AddItemSave>
-              <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
-            </AddItemRow>
+              <AddItemControls>
+                <AddItemSave
+                  onClick={handleSave}
+                  disabled={!newItemName.trim() || saving}
+                >
+                  Add
+                </AddItemSave>
+                <AddItemCancel onClick={cancelAdding}>✕</AddItemCancel>
+              </AddItemControls>
+            </AddItemEditRow>
           ) : (
             <AddItemRow>
               <AddItemButton type='button' onClick={startAdding}>

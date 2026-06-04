@@ -15,15 +15,25 @@ const Overlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 `;
 
 const Modal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 24px 28px;
-  width: min(360px, calc(100vw - 24px));
+  width: min(360px, 100%);
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (max-width: 767px) {
+    padding: 20px;
+  }
 `;
 
 const Header = styled.div`
@@ -106,6 +116,13 @@ const Input = styled.input`
   }
 `;
 
+const ErrorText = styled.p`
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #dc2626;
+  text-align: center;
+`;
+
 const SaveButton = styled.button`
   width: 100%;
   padding: 10px;
@@ -162,13 +179,22 @@ export default function EditCategoryModal({
 }) {
   const [name, setName] = useState(category.name);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSave = async () => {
     const trimmed = name.trim();
     if (!trimmed || trimmed === category.name || saving) return;
     setSaving(true);
+    // Clear any prior error so a stale message doesn't linger across retries.
+    setError('');
     try {
       await onSave(trimmed);
+    } catch (err) {
+      // Prefer the backend-provided message (e.g. duplicate-name 409); fall
+      // back to a generic message. Keep the modal open so the user can fix it.
+      setError(
+        err?.message || 'Could not rename the category. Please try again.'
+      );
     } finally {
       setSaving(false);
     }
@@ -194,11 +220,17 @@ export default function EditCategoryModal({
           <Input
             type='text'
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              // Clear a shown error as soon as the user edits the name again.
+              if (error) setError('');
+            }}
             onKeyDown={handleKeyDown}
             autoFocus
           />
         </Field>
+
+        {error && <ErrorText>{error}</ErrorText>}
 
         <SaveButton
           onClick={handleSave}

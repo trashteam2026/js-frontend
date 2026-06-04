@@ -8,6 +8,7 @@ import { Input } from '@/common/components/form/Input';
 import SubmitButton from '@/common/components/form/SubmitButton';
 import { RedSpan } from '@/common/components/form/styles';
 import { useUser } from '@/common/contexts/UserContext';
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import styled from 'styled-components';
 
 import { BackButton, StyledPage } from './styles';
@@ -82,7 +83,7 @@ export default function SignUp() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/auth/signup`,
+        `${getBackendUrl()}/auth/signup`,
         {
           method: 'POST',
           headers: {

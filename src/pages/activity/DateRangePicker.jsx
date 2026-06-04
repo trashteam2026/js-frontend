@@ -18,32 +18,62 @@ const MONTH_SHORT = [
 ];
 const DAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+const PANTRY_TZ = 'America/Chicago';
+
+const chicagoTodayFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: PANTRY_TZ,
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+});
+
+// The pantry's "today" in America/Chicago, so the picker opens on the pantry's
+// current month regardless of the viewer's browser timezone. month is 0-indexed.
+function chicagoToday() {
+  const parts = {};
+  for (const p of chicagoTodayFormat.formatToParts(new Date())) {
+    if (p.type !== 'literal') parts[p.type] = p.value;
+  }
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month) - 1,
+    day: Number(parts.day),
+  };
+}
+
+// Each calendar day is stored as a UTC-noon instant. UTC noon always lands on
+// the same calendar date in America/Chicago (offset -5/-6), so the day the user
+// sees and selects is exactly the Chicago date the activity query filters on —
+// no off-by-one drift from the browser's local timezone.
+function dayInstant(year, month, day) {
+  return new Date(Date.UTC(year, month, day, 12));
+}
+
 function daysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 }
 
 function startDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay();
+  return new Date(Date.UTC(year, month, 1)).getUTCDay();
 }
 
-function toMidnight(d) {
-  const n = new Date(d);
-  n.setHours(0, 0, 0, 0);
-  return n;
+function normalizeDay(d) {
+  if (!d) return null;
+  return dayInstant(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
 function sameDay(a, b) {
   if (!a || !b) return false;
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
   );
 }
 
 function formatDate(d) {
   if (!d) return '';
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
 
 const Overlay = styled.div`
@@ -224,19 +254,15 @@ const ActionBtn = styled.button`
 `;
 
 export default function DateRangePicker({ value, onChange, onClose }) {
-  const today = new Date();
+  const today = chicagoToday();
   const [viewYear, setViewYear] = useState(
-    value.start?.getFullYear() ?? today.getFullYear()
+    value.start ? value.start.getUTCFullYear() : today.year
   );
   const [viewMonth, setViewMonth] = useState(
-    value.start?.getMonth() ?? today.getMonth()
+    value.start ? value.start.getUTCMonth() : today.month
   );
-  const [tempStart, setTempStart] = useState(
-    value.start ? toMidnight(value.start) : null
-  );
-  const [tempEnd, setTempEnd] = useState(
-    value.end ? toMidnight(value.end) : null
-  );
+  const [tempStart, setTempStart] = useState(normalizeDay(value.start));
+  const [tempEnd, setTempEnd] = useState(normalizeDay(value.end));
 
   const prevYear = viewMonth === 0 ? viewYear - 1 : viewYear;
   const prevMon = viewMonth === 0 ? 11 : viewMonth - 1;
@@ -250,20 +276,20 @@ export default function DateRangePicker({ value, onChange, onClose }) {
   const cells = [];
   for (let i = firstDay - 1; i >= 0; i--) {
     cells.push({
-      date: toMidnight(new Date(prevYear, prevMon, prevDays - i)),
+      date: dayInstant(prevYear, prevMon, prevDays - i),
       current: false,
     });
   }
   for (let d = 1; d <= numDays; d++) {
     cells.push({
-      date: toMidnight(new Date(viewYear, viewMonth, d)),
+      date: dayInstant(viewYear, viewMonth, d),
       current: true,
     });
   }
   let nextIdx = 1;
   while (cells.length < 42) {
     cells.push({
-      date: toMidnight(new Date(nextYear, nextMon, nextIdx++)),
+      date: dayInstant(nextYear, nextMon, nextIdx++),
       current: false,
     });
   }
@@ -303,10 +329,7 @@ export default function DateRangePicker({ value, onChange, onClose }) {
         ? `${formatDate(tempStart)} - MM/DD/YYYY`
         : 'MM/DD/YYYY - MM/DD/YYYY';
 
-  const years = Array.from(
-    { length: 20 },
-    (_, i) => today.getFullYear() - 5 + i
-  );
+  const years = Array.from({ length: 20 }, (_, i) => today.year - 5 + i);
 
   const handleOk = () => {
     if (tempStart && tempEnd) {
@@ -385,7 +408,7 @@ export default function DateRangePicker({ value, onChange, onClose }) {
                     $selected={isStart || isEnd}
                     $currentMonth={current}
                   >
-                    {date.getDate()}
+                    {date.getUTCDate()}
                   </DayCircle>
                 </DayCellWrapper>
               );

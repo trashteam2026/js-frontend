@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import { auth, googleProvider } from '@/firebase-config';
 import {
   onAuthStateChanged,
@@ -24,8 +25,7 @@ UserProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
-const buildUrl = (endpoint) =>
-  `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}${endpoint}`;
+const buildUrl = (endpoint) => `${getBackendUrl()}${endpoint}`;
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);

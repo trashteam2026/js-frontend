@@ -7,8 +7,8 @@ const Row = styled.div`
   align-items: center;
   min-height: 37px;
   padding: 0;
-  background-color: ${({ $index }) =>
-    $index % 2 === 0 ? '#f1f1f3' : '#d3deec'};
+  background-color: ${({ $index, $alert }) =>
+    $alert ? '#fee2e2' : $index % 2 === 0 ? '#f1f1f3' : '#d3deec'};
   cursor: pointer;
   transition: background-color 0.12s ease;
 
@@ -26,7 +26,9 @@ const ItemName = styled.span`
   color: #111827;
   padding: 0 10px;
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const Quantity = styled.span`
@@ -41,8 +43,11 @@ const Quantity = styled.span`
 `;
 
 export default function ItemRow({ item, index, onClick }) {
+  const lowStock =
+    item.status === 'low_stock' || item.status === 'out_of_stock';
+
   return (
-    <Row $index={index} onClick={() => onClick?.(item)}>
+    <Row $index={index} $alert={lowStock} onClick={() => onClick?.(item)}>
       <ItemName>{item.name}</ItemName>
       <Quantity>{item.total_quantity}</Quantity>
     </Row>

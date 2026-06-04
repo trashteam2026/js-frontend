@@ -1,6 +1,7 @@
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import { auth } from '@/firebase-config';
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5050';
+const BASE_URL = getBackendUrl();
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -123,5 +124,5 @@ export const volunteerApi = {
 
   // Owner volunteer management
   getActiveVolunteers: () => authedRequest('GET', '/api/volunteer/volunteers'),
-  getVolunteerStats: () => authedRequest('GET', '/api/volunteer/stats'),
+  getVolunteerHistory: () => authedRequest('GET', '/api/volunteer/history'),
 };

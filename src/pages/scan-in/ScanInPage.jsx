@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/pantry-logo.svg';
+import { useToast } from '@/common/contexts/ToastContext';
 import { useUser } from '@/common/contexts/UserContext';
 import {
   addItem,
@@ -191,11 +192,13 @@ const FinishButton = styled(SecondaryButton)`
   }
 `;
 
+// Soft pale blue surface, shared with ScanOutPage's confirmation card so both
+// scanners' confirmations look identical (dark navy text on light blue).
 const ConfirmCard = styled.button`
   width: 100%;
   padding: 24px 16px;
-  background-color: #2a4d8f;
-  color: #ffffff;
+  background-color: #c9d6e8;
+  color: #1a2b4a;
   border: none;
   border-radius: 14px;
   display: flex;
@@ -206,7 +209,7 @@ const ConfirmCard = styled.button`
   font-family: inherit;
 
   &:hover {
-    background-color: #1e3a6e;
+    background-color: #b8c8de;
   }
 `;
 
@@ -219,6 +222,29 @@ const ConfirmDetail = styled.span`
   font-size: 1.4rem;
   font-weight: 700;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+`;
+
+// Count + item name share the first line; "Added!" sits on its own line below.
+const ConfirmCountName = styled.span`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3em;
+  max-width: 100%;
+`;
+
+// The scanned item name can be arbitrarily long; let it shrink and ellipsize
+// (the card's own padding is the breathing room) while the count stays intact,
+// so the line never overflows the confirmation card.
+const ConfirmItemName = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const ConfirmHint = styled.span`
@@ -436,6 +462,83 @@ const SessionEndedButton = styled.button`
   }
 `;
 
+const ConfirmOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  padding: 16px;
+`;
+
+const ConfirmModal = styled.div`
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px 24px 20px;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (max-width: 767px) {
+    padding: 22px 18px 18px;
+  }
+`;
+
+const ConfirmTitle = styled.h2`
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a2b4a;
+`;
+
+const ConfirmBody = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.45;
+`;
+
+const ConfirmButtonRow = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+const ConfirmCancelButton = styled.button`
+  flex: 1;
+  padding: 11px;
+  background: #ffffff;
+  color: #2a4d8f;
+  border: 1.5px solid #2a4d8f;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f3f8;
+  }
+`;
+
+const ConfirmFinishButton = styled.button`
+  flex: 1;
+  padding: 11px;
+  background: #2a4d8f;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1e3a6e;
+  }
+`;
+
 const EmptyHistory = styled.p`
   text-align: center;
   color: #9ca3af;
@@ -496,8 +599,14 @@ const EditError = styled.p`
 export default function ScanInPage() {
   const navigate = useNavigate();
   const { logout } = useUser();
+  const { showToast } = useToast();
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
+  // Bumped at the start of every local change to itemsScanned (add +1 / delete
+  // -1). The 60s poll snapshots this before its request and only adopts the
+  // server's count if it's unchanged on response — so an in-flight optimistic
+  // update is never overwritten by a server value that predates it.
+  const mutationSeqRef = useRef(0);
 
   // view: 'camera' | 'form' | 'confirmation'
   const [view, setView] = useState('camera');
@@ -506,6 +615,7 @@ export default function ScanInPage() {
   const [pendingLookup, setPendingLookup] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [categoriesError, setCategoriesError] = useState('');
   const [cameraStatus, setCameraStatus] = useState('starting');
   const [cameraError, setCameraError] = useState('');
   const [volunteerName, setVolunteerName] = useState('');
@@ -516,6 +626,7 @@ export default function ScanInPage() {
   const [editError, setEditError] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -523,9 +634,20 @@ export default function ScanInPage() {
     const loadCategories = async () => {
       try {
         const result = await fetchCategories();
-        if (!cancelled) setCategories(result);
+        if (cancelled) return;
+        // Guard against a non-array payload (e.g. an error object) so the
+        // volunteer sees a clear error instead of an empty/broken category list.
+        if (!Array.isArray(result)) {
+          throw new Error('Invalid categories response');
+        }
+        setCategories(result);
+        setCategoriesError('');
       } catch (err) {
         console.error('Category load error:', err);
+        if (!cancelled) {
+          setCategories([]);
+          setCategoriesError("Couldn't load inventory. Please try again.");
+        }
       }
     };
 
@@ -590,9 +712,22 @@ export default function ScanInPage() {
   // 404 (owner ended the session / backend restarted) is handled the same as a
   // regenerated code (403/SESSION_ENDED) — all three mean this code is dead.
   useEffect(() => {
+    let cancelled = false;
     const interval = setInterval(async () => {
+      // Snapshot the mutation sequence before the request. If a local add/delete
+      // happens while this request is in flight, the optimistic counter is more
+      // current than the server's response, so we leave it alone and let the next
+      // poll reconcile — preventing a backwards jump / flicker.
+      const seqBefore = mutationSeqRef.current;
       try {
-        await volunteerApi.getMyProfile();
+        const profile = await volunteerApi.getMyProfile();
+        if (
+          !cancelled &&
+          mutationSeqRef.current === seqBefore &&
+          typeof profile?.itemsScanned === 'number'
+        ) {
+          setItemsScanned(profile.itemsScanned);
+        }
       } catch (err) {
         if (
           err.code === 'SESSION_ENDED' ||
@@ -603,7 +738,10 @@ export default function ScanInPage() {
         }
       }
     }, 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -723,7 +861,7 @@ export default function ScanInPage() {
       setPendingBarcode(null);
       setPendingLookup(null);
       setView('camera');
-    }, 1500);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [view]);
 
@@ -735,6 +873,16 @@ export default function ScanInPage() {
   };
 
   const handleFinish = async () => {
+    // Best-effort: remove our own active_volunteers row in real time so the
+    // owner's Active Now drops us immediately and a later re-join — which mints a
+    // fresh anonymous UID — doesn't leave a stale duplicate row behind. Must run
+    // BEFORE signOut, while the anonymous token is still valid. A failure here
+    // must not block exit (owner-side teardown / expiry still sweeps the row).
+    try {
+      await volunteerApi.finishVolunteering();
+    } catch (err) {
+      console.error('Volunteer self-exit cleanup error:', err);
+    }
     try {
       await logout();
     } catch (err) {
@@ -744,7 +892,10 @@ export default function ScanInPage() {
     }
   };
 
-  const handleBack = handleFinish;
+  // Both the scanner back arrow and the "Finish Scanning" button now route
+  // through a confirmation step before the destructive exit (handleFinish).
+  const handleBack = () => setShowFinishConfirm(true);
+  const requestFinish = () => setShowFinishConfirm(true);
 
   const handleAddManually = () => {
     setPendingBarcode(null);
@@ -754,6 +905,9 @@ export default function ScanInPage() {
   };
 
   const handleFormSubmit = async (data) => {
+    // Mark a local count mutation as in flight so a concurrent poll won't
+    // overwrite the optimistic increment with a stale server value.
+    mutationSeqRef.current += 1;
     try {
       const token = await auth.currentUser?.getIdToken().catch(() => null);
       const result = await addItem({
@@ -827,6 +981,9 @@ export default function ScanInPage() {
   const handleDelete = async (index) => {
     const item = sessionItems[index];
     if (!item.activityLogId) return;
+    // Mark a local count mutation as in flight (see handleFormSubmit) so a
+    // concurrent poll won't clobber the optimistic decrement.
+    mutationSeqRef.current += 1;
     try {
       await activityApi.deleteLog(item.activityLogId);
       setSessionItems((prev) => prev.filter((_, i) => i !== index));
@@ -834,6 +991,7 @@ export default function ScanInPage() {
       if (editingIndex === index) setEditingIndex(null);
     } catch (err) {
       console.error('Delete log error:', err);
+      showToast('Couldn’t remove that scan. Please try again.', 'error');
     }
   };
 
@@ -848,11 +1006,11 @@ export default function ScanInPage() {
 
   return (
     <PageWrapper>
-      {view !== 'form' && (
+      {view !== 'form' && view !== 'history' && (
         <BackButton
           type='button'
           onClick={handleBack}
-          aria-label='Log out and return to landing'
+          aria-label='Finish scanning and return to landing'
         >
           <FiArrowLeft size={20} />
         </BackButton>
@@ -894,11 +1052,12 @@ export default function ScanInPage() {
             )}
           </CameraFrame>
           {cameraError && <ErrorText>{cameraError}</ErrorText>}
+          {categoriesError && <ErrorText>{categoriesError}</ErrorText>}
           <OrText>or</OrText>
           <SecondaryButton type='button' onClick={handleAddManually}>
             Add Item(s) Manually
           </SecondaryButton>
-          <FinishButton type='button' onClick={handleFinish}>
+          <FinishButton type='button' onClick={requestFinish}>
             Finish Scanning
           </FinishButton>
         </SectionWrapper>
@@ -949,6 +1108,7 @@ export default function ScanInPage() {
                     <HistoryName>{item.name}</HistoryName>
                     <HistoryMeta>
                       {item.timestamp.toLocaleTimeString([], {
+                        timeZone: 'America/Chicago',
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
@@ -1027,11 +1187,37 @@ export default function ScanInPage() {
           >
             <ConfirmHeading>Complete!</ConfirmHeading>
             <ConfirmDetail>
-              {confirmation.count} {confirmation.name} Added!
+              <ConfirmCountName>
+                <span>{confirmation.count}</span>
+                <ConfirmItemName>{confirmation.name}</ConfirmItemName>
+              </ConfirmCountName>
+              <span>Added!</span>
             </ConfirmDetail>
             <ConfirmHint>Tap to scan another</ConfirmHint>
           </ConfirmCard>
         </SectionWrapper>
+      )}
+
+      {showFinishConfirm && (
+        <ConfirmOverlay onClick={() => setShowFinishConfirm(false)}>
+          <ConfirmModal onClick={(e) => e.stopPropagation()}>
+            <ConfirmTitle>Finish scanning?</ConfirmTitle>
+            <ConfirmBody>
+              You&apos;ll need to enter the code again to come back.
+            </ConfirmBody>
+            <ConfirmButtonRow>
+              <ConfirmCancelButton
+                type='button'
+                onClick={() => setShowFinishConfirm(false)}
+              >
+                Cancel
+              </ConfirmCancelButton>
+              <ConfirmFinishButton type='button' onClick={handleFinish}>
+                Finish Scanning
+              </ConfirmFinishButton>
+            </ConfirmButtonRow>
+          </ConfirmModal>
+        </ConfirmOverlay>
       )}
 
       {sessionEnded && (
