@@ -21,6 +21,14 @@ const WARNING_BG = '#fff7ed';
 const WARNING_BORDER = '#fdba74';
 const WARNING_TEXT = '#7c2d12';
 
+// Each cart-line Wrapper is its own stacking context (the fade styles always set
+// a transform), so by default siblings paint in DOM order and the manual-pick
+// Dropdown — absolutely positioned inside one line — gets covered by, or bleeds
+// over, neighbouring rows. Lifting the active line to a positive z-index moves
+// its whole stacking context above every sibling (which sit at z-index auto),
+// so the open dropdown always renders cleanly above the other rows.
+const ELEVATED_Z = 20;
+
 const Wrapper = styled.div`
   border: 1px solid ${(p) => (p.$variant === 'error' ? WARNING_BORDER : BORDER)};
   background: ${(p) =>
@@ -39,6 +47,9 @@ const Wrapper = styled.div`
   transition:
     opacity 280ms ease,
     transform 280ms ease;
+  /* Flex items honour z-index without needing position; auto keeps the normal
+     DOM-order stacking, so closing the dropdown restores it. */
+  z-index: ${(p) => (p.$elevated ? ELEVATED_Z : 'auto')};
 `;
 
 const TopRow = styled.div`
@@ -267,6 +278,10 @@ export default function CartLine({
     return items.filter((it) => it.name.toLowerCase().includes(q)).slice(0, 30);
   }, [items, pickQuery]);
 
+  // Only the line whose manual-pick dropdown is actually open needs to be lifted
+  // above its siblings (matches the render gate below).
+  const dropdownOpen = unknownBarcode && pickFocused && filteredItems.length > 0;
+
   const displayName = line.name
     ? line.name
     : line.barcode
@@ -276,7 +291,11 @@ export default function CartLine({
   const variant = isDone ? 'done' : isError ? 'error' : 'normal';
 
   return (
-    <Wrapper $variant={variant} $fading={Boolean(line.fading)}>
+    <Wrapper
+      $variant={variant}
+      $fading={Boolean(line.fading)}
+      $elevated={dropdownOpen}
+    >
       <TopRow>
         <TitleBlock>
           <Title>

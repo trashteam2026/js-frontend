@@ -725,10 +725,9 @@ export default function ScanOutPage() {
     try {
       for (const line of snapshot) {
         if (line.status === 'done') continue;
-        if (line.status === 'error') {
-          // User hasn't resolved this; halt so they can act on it.
-          break;
-        }
+        // Attempt every non-done line in one pass — including lines left in
+        // 'error' by a previous press, which are retried with their current
+        // (possibly user-corrected) quantity / picked item.
 
         setLines((prev) =>
           prev.map((l) =>
@@ -790,9 +789,11 @@ export default function ScanOutPage() {
             )
           );
 
+          // Auth failures (401/403) affect every line, so stop the batch and
+          // surface the global error once instead of hammering the rest.
           if (aborted) break;
-          // Pause on first per-line error so the user can fix it.
-          break;
+          // Any other per-line error is recorded on the line and the pass
+          // continues, so all failures end up shown together.
         }
       }
     } finally {
@@ -804,11 +805,13 @@ export default function ScanOutPage() {
     // the cart individually — no all-or-nothing bulk clear.
   }, [submitting, lines]);
 
+  // Stay enabled while error lines remain — pressing again retries them. Only
+  // block during an active pass and when there's nothing actionable left
+  // (empty cart, or every line already removed).
   const submitDisabled =
     submitting ||
     lines.length === 0 ||
-    lines.every((l) => l.status === 'done') ||
-    lines.some((l) => l.status === 'error');
+    lines.every((l) => l.status === 'done');
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
