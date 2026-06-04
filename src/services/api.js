@@ -123,5 +123,5 @@ export const volunteerApi = {
 
   // Owner volunteer management
   getActiveVolunteers: () => authedRequest('GET', '/api/volunteer/volunteers'),
-  getVolunteerStats: () => authedRequest('GET', '/api/volunteer/stats'),
+  getVolunteerHistory: () => authedRequest('GET', '/api/volunteer/history'),
 };

@@ -60,15 +60,25 @@ const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 20px;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 `;
 
 const SortModal = styled.div`
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 10px;
   padding: 24px 28px;
-  width: min(360px, calc(100vw - 24px));
+  width: min(360px, 100%);
   position: relative;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  @media (max-width: 767px) {
+    padding: 20px;
+  }
 `;
 
 const ModalHeader = styled.div`

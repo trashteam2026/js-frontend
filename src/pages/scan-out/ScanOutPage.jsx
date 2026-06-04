@@ -720,11 +720,7 @@ export default function ScanOutPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <PageWrapper>
-      <OwnerHeader
-        active='scan-out'
-        title='New Trier Township Food Pantry Scan Out'
-        mobileTitle='Scan Out'
-      />
+      <OwnerHeader active='scan-out' title='Scan Out' mobileTitle='Scan Out' />
 
       <Content $isMobile={isMobile}>
         <Panel>

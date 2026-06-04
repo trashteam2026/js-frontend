@@ -5,6 +5,7 @@ import {
   PublicOnlyRoute,
   VolunteerOnlyRoute,
 } from '@/common/components/routes/ProtectedRoutes';
+import { ToastProvider } from '@/common/contexts/ToastContext';
 import { UserProvider } from '@/common/contexts/UserContext';
 import AuthCallback from '@/pages/account/AuthCallback';
 import Login from '@/pages/account/Login';
@@ -26,7 +27,8 @@ import './App.css';
 export default function App() {
   return (
     <UserProvider>
-      <BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
         <Routes>
           <Route path='/' element={<LandingPage />} />
 
@@ -59,8 +61,9 @@ export default function App() {
           <Route path='auth/callback' element={<AuthCallback />} />
           <Route path='auth/reset-password' element={<ResetPassword />} />
           <Route path='*' element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </UserProvider>
   );
 }

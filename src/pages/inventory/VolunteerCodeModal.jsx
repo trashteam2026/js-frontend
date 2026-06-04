@@ -177,12 +177,60 @@ const ErrorText = styled.p`
   text-align: center;
 `;
 
+const ConfirmBody = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.45;
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+const RowButton = styled.button`
+  box-sizing: border-box;
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const RowCancelButton = styled(RowButton)`
+  background: transparent;
+  color: #2c5e95;
+  border: 1px solid #2c5e95;
+
+  &:hover:not(:disabled) {
+    background: #f0f4fa;
+  }
+`;
+
+const RowDangerButton = styled(RowButton)`
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+`;
+
 export default function VolunteerCodeModal({ onClose, onSessionChange }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
 
   useEffect(() => {
     volunteerApi
@@ -213,9 +261,13 @@ export default function VolunteerCodeModal({ onClose, onSessionChange }) {
     setError('');
     try {
       await volunteerApi.endSession();
-      setSession({ active: false, code: null });
+      setConfirmingEnd(false);
       // Ending the session evicts active volunteers — let the host page refresh.
       onSessionChange?.();
+      // On success, close BOTH the confirmation and the parent modal so the
+      // owner returns to the underlying page in one step. (On failure we fall
+      // through to catch and keep both open so they can see/retry.)
+      onClose();
     } catch {
       setError('Failed to end session.');
     } finally {
@@ -235,7 +287,8 @@ export default function VolunteerCodeModal({ onClose, onSessionChange }) {
   };
 
   return (
-    <Backdrop onClick={onClose}>
+    <>
+      <Backdrop onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
         <CloseButton onClick={onClose} aria-label='Close'>
           <FiX size={20} />
@@ -285,13 +338,49 @@ export default function VolunteerCodeModal({ onClose, onSessionChange }) {
             <SecondaryButton onClick={handleGenerate} disabled={actionLoading}>
               {actionLoading ? 'Generating…' : 'Generate New Code'}
             </SecondaryButton>
-            <DangerButton onClick={handleEnd} disabled={actionLoading}>
+            <DangerButton
+              onClick={() => {
+                setError('');
+                setConfirmingEnd(true);
+              }}
+              disabled={actionLoading}
+            >
               End Session
             </DangerButton>
           </>
         )}
       </Modal>
-    </Backdrop>
+      </Backdrop>
+
+      {confirmingEnd && (
+        <Backdrop onClick={() => !actionLoading && setConfirmingEnd(false)}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            <Title>End session?</Title>
+            <ConfirmBody>
+              All active volunteers will be removed, and a new code must be
+              generated for volunteers to rejoin.
+            </ConfirmBody>
+            {error && <ErrorText>{error}</ErrorText>}
+            <ButtonRow>
+              <RowCancelButton
+                type='button'
+                onClick={() => setConfirmingEnd(false)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </RowCancelButton>
+              <RowDangerButton
+                type='button'
+                onClick={handleEnd}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Ending…' : 'End Session'}
+              </RowDangerButton>
+            </ButtonRow>
+          </Modal>
+        </Backdrop>
+      )}
+    </>
   );
 }
 

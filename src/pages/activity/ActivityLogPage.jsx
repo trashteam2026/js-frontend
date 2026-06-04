@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FiCalendar } from 'react-icons/fi';
 
 import OwnerHeader from '@/common/components/navigation/OwnerHeader';
@@ -179,6 +179,8 @@ const DataRow = styled.div`
 
 const NameCell = styled.div`
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   padding: 0 10px;
   font-size: 14px;
   color: #111827;
@@ -190,6 +192,15 @@ const NameCell = styled.div`
     padding: 0 8px;
     font-size: 13px;
   }
+`;
+
+// text-overflow: ellipsis does not apply to the flex NameCell itself, so the
+// name text lives in an inner block (mirrors VolunteerInfo/VolunteerName).
+const NameText = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const QtyCell = styled.div`
@@ -446,10 +457,17 @@ function computeStats(logs) {
   };
 }
 
+// Anchor the default range to the pantry's current month in America/Chicago,
+// not the browser's local month — otherwise a viewer in a different timezone
+// near a month boundary could default to the wrong month. The boundaries are
+// stored as UTC-noon instants whose Chicago calendar date is exactly the 1st
+// and last of the Chicago month (Chicago's UTC-5/6 offset keeps UTC noon on the
+// same calendar day), so chicagoDateString() formats them back without drift.
 function defaultDateRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const { year, month } = chicagoParts(new Date());
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const start = new Date(Date.UTC(year, month - 1, 1, 12));
+  const end = new Date(Date.UTC(year, month - 1, lastDay, 12));
   return { start, end };
 }
 
@@ -458,6 +476,7 @@ function defaultDateRange() {
 export default function ActivityLogPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [dateRange, setDateRange] = useState(defaultDateRange);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -474,26 +493,35 @@ export default function ActivityLogPage() {
       .finally(() => setLoading(false));
   }, [dateRange]);
 
-  const statsMonthName =
-    MONTH_NAMES[dateRange.start?.getMonth() ?? new Date().getMonth()];
-  const stats = computeStats(logs);
-  const trafficData = computeTrafficData(logs);
-  const grouped = groupLogs(logs);
+  // Debounce the search term so the (memoized) filter below doesn't recompute on
+  // every keystroke; the input itself stays fully responsive via searchQuery.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const query = searchQuery.trim().toLowerCase();
-  const displayActivity = query
-    ? grouped
-        .map((entry) => ({
-          ...entry,
-          added: entry.added.filter((r) =>
-            r.name.toLowerCase().includes(query)
-          ),
-          removed: entry.removed.filter((r) =>
-            r.name.toLowerCase().includes(query)
-          ),
-        }))
-        .filter((entry) => entry.added.length > 0 || entry.removed.length > 0)
-    : grouped;
+  const statsMonthName =
+    MONTH_NAMES[chicagoParts(dateRange.start ?? new Date()).month - 1];
+
+  // Derived views over the full log set only depend on `logs`; memoize them so a
+  // keystroke (which changes the search term, not the logs) doesn't re-run them.
+  const stats = useMemo(() => computeStats(logs), [logs]);
+  const trafficData = useMemo(() => computeTrafficData(logs), [logs]);
+  const grouped = useMemo(() => groupLogs(logs), [logs]);
+
+  const displayActivity = useMemo(() => {
+    const query = debouncedQuery.trim().toLowerCase();
+    if (!query) return grouped;
+    return grouped
+      .map((entry) => ({
+        ...entry,
+        added: entry.added.filter((r) => r.name.toLowerCase().includes(query)),
+        removed: entry.removed.filter((r) =>
+          r.name.toLowerCase().includes(query)
+        ),
+      }))
+      .filter((entry) => entry.added.length > 0 || entry.removed.length > 0);
+  }, [grouped, debouncedQuery]);
 
   return (
     <PageWrapper>
@@ -555,7 +583,9 @@ export default function ActivityLogPage() {
               <SectionHeader>Items Added</SectionHeader>
               {entry.added.map((item, i) => (
                 <DataRow key={i} $even={i % 2 === 0}>
-                  <NameCell>{item.name}</NameCell>
+                  <NameCell>
+                    <NameText>{item.name}</NameText>
+                  </NameCell>
                   <QtyCell>{item.qty}</QtyCell>
                   <TimeCell>{item.time}</TimeCell>
                 </DataRow>
@@ -563,7 +593,9 @@ export default function ActivityLogPage() {
               <SectionHeader>Items Removed</SectionHeader>
               {entry.removed.map((item, i) => (
                 <DataRow key={i} $even={i % 2 === 0}>
-                  <NameCell>{item.name}</NameCell>
+                  <NameCell>
+                    <NameText>{item.name}</NameText>
+                  </NameCell>
                   <QtyCell>{item.qty}</QtyCell>
                   <TimeCell>{item.time}</TimeCell>
                 </DataRow>

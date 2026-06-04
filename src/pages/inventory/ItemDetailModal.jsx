@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 
 import PrintQuantityModal from '@/common/components/PrintQuantityModal';
+import { useToast } from '@/common/contexts/ToastContext';
 import useIsMobile from '@/common/hooks/useIsMobile';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
@@ -482,6 +483,7 @@ export default function ItemDetailModal({
   onItemUpdated,
 }) {
   const isMobile = useIsMobile();
+  const { showToast } = useToast();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -623,6 +625,10 @@ export default function ItemDetailModal({
     setEditingCell(null);
     setSaving(true);
 
+    // The save fires multiple sequential backend calls; if one fails mid-loop
+    // some changes commit and others don't. Track failure so we can always
+    // refetch the true DB state afterward and tell the owner the result.
+    let failed = false;
     try {
       const targetDate = `${year}-${String(month).padStart(2, '0')}-01`;
 
@@ -648,14 +654,29 @@ export default function ItemDetailModal({
           await batchesApi.delete(itemId, b.id);
         }
       }
-
-      await fetchDetail();
     } catch (err) {
       console.error('Save cell error:', err);
+      failed = true;
     } finally {
+      // Always resync with the backend — a mid-loop failure leaves the DB in a
+      // partially-updated state the optimistic grid wouldn't reflect.
+      try {
+        await fetchDetail();
+      } catch (refetchErr) {
+        console.error('Refetch after save error:', refetchErr);
+      }
       setSaving(false);
     }
-  }, [editingCell, cellInput, detail, itemId, saving, fetchDetail]);
+
+    if (failed) {
+      showToast(
+        "Some changes couldn't be saved. Please review and try again.",
+        'error'
+      );
+    } else {
+      showToast('Saved.', 'success');
+    }
+  }, [editingCell, cellInput, detail, itemId, saving, fetchDetail, showToast]);
 
   // ── Threshold save ──────────────────────────────────────────────────────────
   const saveThreshold = useCallback(async () => {

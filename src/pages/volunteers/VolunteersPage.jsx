@@ -108,7 +108,9 @@ const VolunteerList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 360px;
+  /* Scrolls internally once the list grows past this height so the panel — and
+     the page — never grows with it; matches the History table's cap. */
+  max-height: 420px;
   overflow-y: auto;
   padding-right: 2px;
 `;
@@ -155,33 +157,53 @@ const VolunteerMeta = styled.div`
   margin-top: 2px;
 `;
 
-const StatBadge = styled.div`
-  background: #e0eaf7;
-  color: #1a2b4a;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  white-space: nowrap;
-`;
-
 const StatsTable = styled.div`
   display: flex;
   flex-direction: column;
+  /* No outer border. The 1px row gaps reveal this background as thin horizontal
+     dividers; the vertical column dividers are border-rights on the cells.
+     Scrolls internally on both axes so the panel never grows the page — vertical
+     past max-height, horizontal on narrow viewports where the rows hold their
+     min-width. Header + data rows live inside here, so they scroll together. */
   gap: 1px;
+  background: #e5e7eb;
   border-radius: 8px;
-  overflow-y: auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   max-height: 420px;
 `;
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 70px 100px 150px;
-  gap: 12px;
+  /* Quantity (col 3) is wide enough for an 8-digit count; Time (col 4) holds a
+     full "Mon D, YYYY, H:MM AM" without truncating. Narrow viewports overflow
+     and scroll horizontally rather than squeezing these. */
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.4fr) 110px 200px;
   align-items: center;
-  padding: 10px 14px;
   background: #f8fafc;
   font-size: 0.88rem;
+  min-width: 640px;
+
+  > span {
+    min-width: 0;
+    /* Padding lives on the cells (not the row) so the column dividers span the
+       full row height; the horizontal padding gives each divider breathing room. */
+    padding: 10px 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Thin 1px vertical dividers between columns — no outer border. */
+  > span:not(:last-child) {
+    border-right: 1px solid #e5e7eb;
+  }
+
+  /* Quantity (3rd column) is centered; Volunteer, Item, Time stay left. */
+  > span:nth-child(3) {
+    text-align: center;
+  }
 
   &:first-child {
     background: #e9edf5;
@@ -193,10 +215,8 @@ const StatsRow = styled.div`
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 60px 70px;
-    /* Hide "Last Active" on narrow screens. */
-    > *:nth-child(n + 4) {
-      display: none;
+    > span {
+      padding: 9px 10px;
     }
   }
 `;
@@ -214,15 +234,22 @@ function initials(name) {
 
 function formatJoined(iso) {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString([], {
+    timeZone: 'America/Chicago',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function formatDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString([], {
+  return new Date(iso).toLocaleString([], {
+    timeZone: 'America/Chicago',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -230,9 +257,10 @@ function formatDate(iso) {
 
 export default function VolunteersPage() {
   const [active, setActive] = useState([]);
-  const [stats, setStats] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [historyTruncated, setHistoryTruncated] = useState(false);
   const [loadingActive, setLoadingActive] = useState(true);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   const fetchActive = useCallback(async () => {
     setLoadingActive(true);
@@ -246,31 +274,33 @@ export default function VolunteersPage() {
     }
   }, []);
 
-  const fetchStats = useCallback(async () => {
-    setLoadingStats(true);
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true);
     try {
-      const data = await volunteerApi.getVolunteerStats();
-      setStats(data);
+      const data = await volunteerApi.getVolunteerHistory();
+      setHistory(data.history || []);
+      setHistoryTruncated(Boolean(data.truncated));
     } catch {
-      setStats([]);
+      setHistory([]);
+      setHistoryTruncated(false);
     } finally {
-      setLoadingStats(false);
+      setLoadingHistory(false);
     }
   }, []);
 
   useEffect(() => {
     fetchActive();
-    fetchStats();
-  }, [fetchActive, fetchStats]);
+    fetchHistory();
+  }, [fetchActive, fetchHistory]);
 
   // The Volunteer Session modal lives in OwnerHeader, which renders on this very
   // page. Ending/generating/regenerating a code there changes who's active and
-  // the session-scoped stats, so re-fetch both panels when it reports a change —
-  // otherwise they sit stale behind the modal until a manual refresh.
+  // the session-scoped history, so re-fetch both panels when it reports a
+  // change — otherwise they sit stale behind the modal until a manual refresh.
   const handleSessionChange = useCallback(() => {
     fetchActive();
-    fetchStats();
-  }, [fetchActive, fetchStats]);
+    fetchHistory();
+  }, [fetchActive, fetchHistory]);
 
   return (
     <PageWrapper>
@@ -286,7 +316,7 @@ export default function VolunteersPage() {
                 Active Now
               </SectionTitle>
               <SectionDescription>
-                Active in the current session.
+                Removed on volunteer exit, end Session, or new code.
               </SectionDescription>
             </SectionHeadingGroup>
             <RefreshButton
@@ -313,16 +343,13 @@ export default function VolunteersPage() {
                       Joined {formatJoined(v.joinedAt)}
                     </VolunteerMeta>
                   </VolunteerInfo>
-                  <StatBadge>
-                    {v.itemsScanned} {v.itemsScanned === 1 ? 'scan' : 'scans'}
-                  </StatBadge>
                 </VolunteerRow>
               ))}
             </VolunteerList>
           )}
         </SectionCard>
 
-        {/* Historical stats */}
+        {/* Volunteer history */}
         <SectionCard>
           <SectionHeader>
             <SectionHeadingGroup>
@@ -331,45 +358,55 @@ export default function VolunteersPage() {
                   size={15}
                   style={{ marginRight: 6, verticalAlign: 'middle' }}
                 />
-                All-Time Stats
+                Volunteer History
               </SectionTitle>
               <SectionDescription>
-                Stats for the current session code.
+                Resets when new code generated.
               </SectionDescription>
             </SectionHeadingGroup>
             <RefreshButton
-              onClick={fetchStats}
+              onClick={fetchHistory}
               title='Refresh'
-              aria-label='Refresh volunteer stats'
+              aria-label='Refresh volunteer history'
             >
               <FiRefreshCw size={16} />
             </RefreshButton>
           </SectionHeader>
 
-          {loadingStats ? (
+          {loadingHistory ? (
             <EmptyText>Loading…</EmptyText>
-          ) : stats.length === 0 ? (
-            <EmptyText>No volunteer activity for the current code yet.</EmptyText>
+          ) : history.length === 0 ? (
+            <EmptyText>No volunteer scan-ins for the current code yet.</EmptyText>
           ) : (
             <StatsTable>
               <StatsRow>
-                <span>Name</span>
-                <span>Scans</span>
-                <span>Items Added</span>
-                <span>Last Active</span>
+                <span>Volunteer</span>
+                <span>Item</span>
+                <span>Quantity</span>
+                <span>Time</span>
               </StatsRow>
-              {stats.map((s) => (
-                <StatsRow key={s.volunteer_name}>
+              {history.map((entry) => (
+                <StatsRow key={entry.id}>
+                  <span>{entry.volunteer_name || 'Volunteer'}</span>
                   <span style={{ fontWeight: 600, color: '#1a2b4a' }}>
-                    {s.volunteer_name}
+                    {entry.item_name}
                   </span>
-                  <span>{s.scan_count ?? 0}</span>
-                  <span>{s.total_items ?? 0}</span>
+                  <span>{entry.quantity ?? 0}</span>
                   <span style={{ color: '#6b7280' }}>
-                    {formatDate(s.last_active)}
+                    {formatDate(entry.created_at)}
                   </span>
                 </StatsRow>
               ))}
+              {historyTruncated && (
+                <StatsRow>
+                  <span style={{ color: '#6b7280' }}>
+                    Showing the 500 most recent scan-ins.
+                  </span>
+                  <span />
+                  <span />
+                  <span />
+                </StatsRow>
+              )}
             </StatsTable>
           )}
         </SectionCard>
