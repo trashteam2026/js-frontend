@@ -1,9 +1,9 @@
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import { auth } from '@/firebase-config';
 
 const STORAGE_KEY = 'pantry_volunteer_added_items';
 
-const buildUrl = (endpoint) =>
-  `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}${endpoint}`;
+const buildUrl = (endpoint) => `${getBackendUrl()}${endpoint}`;
 
 function readAll() {
   try {

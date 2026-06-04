@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaBarcode } from 'react-icons/fa';
-import { FiSearch, FiUser, FiUsers } from 'react-icons/fi';
+import { FiUser, FiUsers } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import PantryLogo from '@/assets/icons/image-1.svg';
@@ -165,31 +165,6 @@ const SearchInput = styled.input`
   &::placeholder {
     color: #4b5563;
     opacity: 1;
-  }
-`;
-
-const SearchButton = styled.button`
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 9999px;
-  background: #2c5e95;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  svg {
-    color: #ffffff;
-    stroke: #ffffff;
-    fill: none;
-  }
-
-  svg path,
-  svg circle,
-  svg line,
-  svg polyline {
-    stroke: #ffffff;
   }
 `;
 
@@ -466,9 +441,6 @@ export default function OwnerHeader({
                 value={searchValue}
                 onChange={(e) => onSearchChange?.(e.target.value)}
               />
-              <SearchButton type='button' title='Search'>
-                <FiSearch size={21} color='#ffffff' />
-              </SearchButton>
             </SearchPill>
           </SearchWrapper>
         )}

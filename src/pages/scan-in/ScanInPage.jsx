@@ -600,6 +600,11 @@ export default function ScanInPage() {
   const { showToast } = useToast();
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
+  // Bumped at the start of every local change to itemsScanned (add +1 / delete
+  // -1). The 60s poll snapshots this before its request and only adopts the
+  // server's count if it's unchanged on response — so an in-flight optimistic
+  // update is never overwritten by a server value that predates it.
+  const mutationSeqRef = useRef(0);
 
   // view: 'camera' | 'form' | 'confirmation'
   const [view, setView] = useState('camera');
@@ -705,9 +710,22 @@ export default function ScanInPage() {
   // 404 (owner ended the session / backend restarted) is handled the same as a
   // regenerated code (403/SESSION_ENDED) — all three mean this code is dead.
   useEffect(() => {
+    let cancelled = false;
     const interval = setInterval(async () => {
+      // Snapshot the mutation sequence before the request. If a local add/delete
+      // happens while this request is in flight, the optimistic counter is more
+      // current than the server's response, so we leave it alone and let the next
+      // poll reconcile — preventing a backwards jump / flicker.
+      const seqBefore = mutationSeqRef.current;
       try {
-        await volunteerApi.getMyProfile();
+        const profile = await volunteerApi.getMyProfile();
+        if (
+          !cancelled &&
+          mutationSeqRef.current === seqBefore &&
+          typeof profile?.itemsScanned === 'number'
+        ) {
+          setItemsScanned(profile.itemsScanned);
+        }
       } catch (err) {
         if (
           err.code === 'SESSION_ENDED' ||
@@ -718,7 +736,10 @@ export default function ScanInPage() {
         }
       }
     }, 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -882,6 +903,9 @@ export default function ScanInPage() {
   };
 
   const handleFormSubmit = async (data) => {
+    // Mark a local count mutation as in flight so a concurrent poll won't
+    // overwrite the optimistic increment with a stale server value.
+    mutationSeqRef.current += 1;
     try {
       const token = await auth.currentUser?.getIdToken().catch(() => null);
       const result = await addItem({
@@ -955,6 +979,9 @@ export default function ScanInPage() {
   const handleDelete = async (index) => {
     const item = sessionItems[index];
     if (!item.activityLogId) return;
+    // Mark a local count mutation as in flight (see handleFormSubmit) so a
+    // concurrent poll won't clobber the optimistic decrement.
+    mutationSeqRef.current += 1;
     try {
       await activityApi.deleteLog(item.activityLogId);
       setSessionItems((prev) => prev.filter((_, i) => i !== index));

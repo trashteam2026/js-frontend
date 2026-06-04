@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useUser } from '@/common/contexts/UserContext';
+import { getBackendUrl } from '@/common/utils/backendUrl';
 import { auth } from '@/firebase-config';
 import { getRedirectResult } from 'firebase/auth';
 import styled from 'styled-components';
@@ -34,7 +35,7 @@ export default function AuthCallback() {
         const idToken = await result.user.getIdToken();
 
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/auth/token`,
+          `${getBackendUrl()}/auth/token`,
           {
             method: 'POST',
             credentials: 'include',
