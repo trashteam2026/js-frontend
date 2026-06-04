@@ -116,6 +116,13 @@ const Input = styled.input`
   }
 `;
 
+const ErrorText = styled.p`
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #dc2626;
+  text-align: center;
+`;
+
 const SaveButton = styled.button`
   width: 100%;
   padding: 10px;
@@ -172,13 +179,22 @@ export default function EditCategoryModal({
 }) {
   const [name, setName] = useState(category.name);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSave = async () => {
     const trimmed = name.trim();
     if (!trimmed || trimmed === category.name || saving) return;
     setSaving(true);
+    // Clear any prior error so a stale message doesn't linger across retries.
+    setError('');
     try {
       await onSave(trimmed);
+    } catch (err) {
+      // Prefer the backend-provided message (e.g. duplicate-name 409); fall
+      // back to a generic message. Keep the modal open so the user can fix it.
+      setError(
+        err?.message || 'Could not rename the category. Please try again.'
+      );
     } finally {
       setSaving(false);
     }
@@ -204,11 +220,17 @@ export default function EditCategoryModal({
           <Input
             type='text'
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              // Clear a shown error as soon as the user edits the name again.
+              if (error) setError('');
+            }}
             onKeyDown={handleKeyDown}
             autoFocus
           />
         </Field>
+
+        {error && <ErrorText>{error}</ErrorText>}
 
         <SaveButton
           onClick={handleSave}

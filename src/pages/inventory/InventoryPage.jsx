@@ -272,6 +272,10 @@ export default function InventoryPage() {
       setCategoryToEdit(null);
     } catch (err) {
       console.error('Rename category error:', err);
+      // Re-throw so EditCategoryModal (which awaits onSave) can surface the
+      // failure inline and keep itself open. Rename is intentionally
+      // inline-only — no toast here.
+      throw err;
     }
   };
 
