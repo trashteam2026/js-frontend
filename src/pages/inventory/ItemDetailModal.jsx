@@ -129,6 +129,22 @@ const InfoValue = styled.span`
   font-weight: 400;
 `;
 
+// A long label (e.g. "Low Status Count:") would otherwise overflow the row at
+// narrow widths, shrink, wrap to two lines, and leave the value/pencil floating
+// detached to the right. Allowing the row to wrap lets the value group drop to
+// the next line left-aligned instead, staying adjacent to the label.
+const WrappingInfoRow = styled(InfoRow)`
+  flex-wrap: wrap;
+`;
+
+// Keeps the value and its edit pencil together as a single wrap unit so the
+// pencil never separates from the value when the row wraps.
+const InfoValueGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const EditIcon = styled.button`
   background: none;
   border: none;
@@ -159,9 +175,9 @@ const InlineInput = styled.input`
   }
 `;
 
-const InlineSelect = styled.select`
-  min-width: 220px;
-  max-width: 100%;
+const CategorySelect = styled.select`
+  flex: 1;
+  min-width: 0;
   padding: 3px 8px;
   font-size: 15px;
   border: 1px solid #2c5e95;
@@ -510,10 +526,6 @@ export default function ItemDetailModal({
   const [thresholdInput, setThresholdInput] = useState('');
   const thresholdInputRef = useRef(null);
 
-  // Category editing
-  const [editingCategory, setEditingCategory] = useState(false);
-  const [categoryInput, setCategoryInput] = useState('');
-
   // No-expiration batch qty editing
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [batchInput, setBatchInput] = useState('');
@@ -732,41 +744,34 @@ export default function ItemDetailModal({
     setEditingName(false);
   }, [detail?.name]);
 
-  const saveCategory = useCallback(async () => {
-    const nextCategoryId =
-      categoryInput === '' ? null : Number.parseInt(categoryInput, 10);
-    const currentCategoryId = detail?.category_id || null;
+  // Saves immediately when the category dropdown changes. The new id is read
+  // straight from the change event (not from state) so we never act on a stale
+  // value, then mapped '' -> null else parseInt before hitting the API.
+  const saveCategory = useCallback(
+    async (rawValue) => {
+      const nextCategoryId =
+        rawValue === '' ? null : Number.parseInt(rawValue, 10);
+      const currentCategoryId = detail?.category_id ?? null;
 
-    setEditingCategory(false);
-    if (nextCategoryId === currentCategoryId || saving) return;
+      if (nextCategoryId === currentCategoryId || saving) return;
 
-    setSaving(true);
-    try {
-      const updated = await itemsApi.update(itemId, {
-        category_id: nextCategoryId,
-      });
-      setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
-      onItemUpdated?.(updated);
-      showToast('Saved.', 'success');
-    } catch (err) {
-      console.error('Update item category error:', err);
-      showToast("Couldn't save changes. Please try again.", 'error');
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    categoryInput,
-    detail?.category_id,
-    itemId,
-    onItemUpdated,
-    saving,
-    showToast,
-  ]);
-
-  const cancelCategoryEdit = useCallback(() => {
-    setCategoryInput(detail?.category_id ? String(detail.category_id) : '');
-    setEditingCategory(false);
-  }, [detail?.category_id]);
+      setSaving(true);
+      try {
+        const updated = await itemsApi.update(itemId, {
+          category_id: nextCategoryId,
+        });
+        setDetail((prev) => (prev ? { ...prev, ...updated } : prev));
+        onItemUpdated?.(updated);
+        showToast('Saved.', 'success');
+      } catch (err) {
+        console.error('Update item category error:', err);
+        showToast("Couldn't save changes. Please try again.", 'error');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [detail?.category_id, itemId, onItemUpdated, saving, showToast]
+  );
 
   // ── No-exp batch qty save ───────────────────────────────────────────────────
   const saveBatchQty = useCallback(
@@ -852,6 +857,16 @@ export default function ItemDetailModal({
   );
 
   // ─── Render ─────────────────────────────────────────────────────────────────
+
+  // Drive the category <select> from the item's current category. When the id
+  // is null or doesn't match any known category, fall back to '' so the select
+  // shows the non-selectable placeholder rather than silently displaying the
+  // first category as if it were chosen.
+  const currentCategoryId = detail?.category_id ?? null;
+  const categoryMatched = categories.some((c) => c.id === currentCategoryId);
+  const selectedCategoryValue = categoryMatched
+    ? String(currentCategoryId)
+    : '';
 
   if (loading) {
     return (
@@ -940,57 +955,22 @@ export default function ItemDetailModal({
 
         <InfoRow>
           <InfoLabel>Category:</InfoLabel>
-          {editingCategory ? (
-            <>
-              <InlineSelect
-                value={categoryInput}
-                disabled={saving}
-                onChange={(e) => setCategoryInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveCategory();
-                  if (e.key === 'Escape') cancelCategoryEdit();
-                }}
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </InlineSelect>
-              <EditIcon
-                type='button'
-                title='Save category'
-                onClick={saveCategory}
-                disabled={saving}
-              >
-                <FiCheck size={14} />
-              </EditIcon>
-              <EditIcon
-                type='button'
-                title='Cancel category edit'
-                onClick={cancelCategoryEdit}
-                disabled={saving}
-              >
-                <FiX size={14} />
-              </EditIcon>
-            </>
-          ) : (
-            <>
-              <InfoValue>{detail.category_name || 'Uncategorized'}</InfoValue>
-              <EditIcon
-                type='button'
-                title='Edit category'
-                onClick={() => {
-                  setCategoryInput(
-                    detail.category_id ? String(detail.category_id) : ''
-                  );
-                  setEditingCategory(true);
-                }}
-              >
-                <FiEdit2 size={14} />
-              </EditIcon>
-            </>
-          )}
+          <CategorySelect
+            value={selectedCategoryValue}
+            disabled={saving}
+            onChange={(e) => saveCategory(e.target.value)}
+          >
+            {!categoryMatched && (
+              <option value='' disabled hidden>
+                Select a category…
+              </option>
+            )}
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </CategorySelect>
         </InfoRow>
 
         <InfoRow>
@@ -998,7 +978,7 @@ export default function ItemDetailModal({
           <InfoValue>{detail.total_quantity}</InfoValue>
         </InfoRow>
 
-        <InfoRow>
+        <WrappingInfoRow>
           <InfoLabel>Low Status Count:</InfoLabel>
           {editingThreshold ? (
             <InlineInput
@@ -1014,7 +994,7 @@ export default function ItemDetailModal({
               }}
             />
           ) : (
-            <>
+            <InfoValueGroup>
               <InfoValue>{detail.low_stock_threshold}</InfoValue>
               <EditIcon
                 title='Edit threshold'
@@ -1025,9 +1005,9 @@ export default function ItemDetailModal({
               >
                 <FiEdit2 size={14} />
               </EditIcon>
-            </>
+            </InfoValueGroup>
           )}
-        </InfoRow>
+        </WrappingInfoRow>
 
         {/* ── Expiration date grid ── */}
         <ExpirationSection>

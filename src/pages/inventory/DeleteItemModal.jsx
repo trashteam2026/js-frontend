@@ -92,15 +92,38 @@ const WarningBox = styled.div`
   margin-bottom: 20px;
 `;
 
+// min-width:0 lets this flex child of WarningBox shrink so a long, unbreakable
+// item name can't push the warning box wider than the modal.
 const WarningText = styled.p`
   margin: 0;
   font-size: 14px;
   color: #1a2b4a;
   line-height: 1.5;
+  min-width: 0;
 `;
 
+// Groups the truncating name with the trailing "?" so the question mark stays
+// on the same line as the (ellipsized) name instead of being pushed below it.
+// inline-flex + max-width:100% keeps the whole group inside the WarningText
+// content box (which itself can't exceed the modal); "Delete" and "This cannot
+// be undone." flow around it as normal inline text.
+const ItemNameLine = styled.span`
+  display: inline-flex;
+  align-items: baseline;
+  max-width: 100%;
+  vertical-align: bottom;
+`;
+
+// The item name can be arbitrarily long; clamp it to a single line that
+// ellipsizes, mirroring the min-width:0 + overflow/ellipsis convention used by
+// ItemRow / ScanInPage's confirm card. Only the name shrinks; the "?" sibling
+// in ItemNameLine keeps its natural width.
 const ItemNameStrong = styled.strong`
   color: #1a2b4a;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 `;
 
 const ButtonRow = styled.div`
@@ -180,8 +203,12 @@ export default function DeleteItemModal({ itemName, onClose, onConfirm }) {
             style={{ flexShrink: 0, marginTop: 1 }}
           />
           <WarningText>
-            Delete <ItemNameStrong>&quot;{itemName}&quot;</ItemNameStrong>? This
-            cannot be undone.
+            Delete{' '}
+            <ItemNameLine>
+              <ItemNameStrong title={itemName}>{itemName}</ItemNameStrong>
+              ?
+            </ItemNameLine>{' '}
+            This cannot be undone.
           </WarningText>
         </WarningBox>
 
