@@ -276,7 +276,7 @@ export function renderUpcASvg(value, { width = 224, height = 92 } = {}) {
   }
 
   return `
-    <svg class="barcode-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="UPC ${barcode}">
+    <svg class="barcode-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="UPC ${barcode}">
       ${bars.join('')}
       <text x="${width / 2}" y="${height - 2}" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" letter-spacing="2">${barcode}</text>
     </svg>
@@ -321,7 +321,7 @@ export function renderCode128Svg(value, { width = 224, height = 92 } = {}) {
   });
 
   return `
-    <svg class="barcode-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Barcode ${escapeHtml(barcode)}">
+    <svg class="barcode-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Barcode ${escapeHtml(barcode)}">
       ${bars.join('')}
       <text x="${width / 2}" y="${height - 2}" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" letter-spacing="1">${escapeHtml(barcode)}</text>
     </svg>
@@ -372,77 +372,142 @@ export function openBarcodePrintWindow({
       <head>
         <title>${escapeHtml(itemName)} Barcodes</title>
         <style>
-          @page { size: letter; margin: 0.45in; }
+          /* size: auto -> use whatever label/page size the printer driver has
+             selected (we don't know the user's exact label). margin: 0 removes
+             the wasted Letter margin so the label content can fill the media. */
+          @page { size: auto; margin: 0; }
           * { box-sizing: border-box; }
-          body {
+          html, body {
             margin: 0;
+            padding: 0;
             color: #111827;
             font-family: Arial, sans-serif;
           }
-          .sheet {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.22in;
-          }
+          /* No grid: one label per page so a roll/label printer feeds one
+             label per print. */
+          .sheet { display: block; }
           .label {
-            min-height: 1.65in;
-            border: 1px dashed #9ca3af;
-            padding: 0.14in;
-            break-inside: avoid;
+            /* Fill the full printable page, whatever its size. */
+            width: 100%;
+            min-height: 100vh;
+            padding: 4%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            text-align: center;
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
+          /* Page break after every label except the last, so N copies feed as
+             N separate labels with no trailing blank label. */
+          .label:not(:last-child) {
+            break-after: page;
+            page-break-after: always;
+          }
+          /* Text sizes are in vw (relative to page/label width) so they scale
+             proportionally with the label, since we don't know its size. */
           .item-name {
             max-width: 100%;
-            font-size: 15px;
+            font-size: 7vw;
             font-weight: 700;
-            text-align: center;
+            line-height: 1.1;
             overflow-wrap: anywhere;
           }
           .category-name {
-            margin-top: 2px;
-            font-size: 11px;
+            margin-top: 1.5%;
+            max-width: 100%;
+            font-size: 4.5vw;
             color: #4b5563;
-            text-align: center;
+            line-height: 1.1;
             overflow-wrap: anywhere;
           }
           .barcode-svg {
-            width: 100%;
-            max-width: 2.7in;
+            /* Fill the label width (96% leaves a small quiet zone on each side
+               for reliable scanning). max-height keeps it from overflowing the
+               page on short/wide labels; the viewBox preserves aspect ratio so
+               it letterboxes rather than distorts when height-capped. */
+            width: 96%;
+            max-height: 60vh;
             height: auto;
-            margin-top: 0.08in;
+            margin-top: 4%;
+            display: block;
           }
           .plain-barcode {
-            margin-top: 0.12in;
+            margin-top: 4%;
             font-family: "Courier New", monospace;
-            font-size: 18px;
+            font-size: 6vw;
             font-weight: 700;
             letter-spacing: 1px;
-          }
-          @media print {
-            .label { border-color: #d1d5db; }
           }
         </style>
       </head>
       <body>
         <main class="sheet">${labels}</main>
-        <script>
-          window.addEventListener('load', () => {
-            window.focus();
-            window.print();
-          });
-        </script>
       </body>
     </html>
   `;
 
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    return;
+  // Render and print into a hidden, off-screen iframe rather than a popup
+  // window/tab. This prints in-place (no blank tab left behind, no popup
+  // blocker). A single, fixed-id iframe is reused so repeated prints can never
+  // accumulate orphaned iframes in the DOM.
+  const PRINT_FRAME_ID = 'barcode-print-frame';
+  const stale = document.getElementById(PRINT_FRAME_ID);
+  if (stale) {
+    stale.remove();
   }
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = PRINT_FRAME_ID;
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText =
+    'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+
+  let printed = false;
+  let removed = false;
+  let removeTimer = null;
+
+  const removeFrame = () => {
+    if (removed) return;
+    removed = true;
+    if (removeTimer) {
+      clearTimeout(removeTimer);
+      removeTimer = null;
+    }
+    iframe.remove();
+  };
+
+  // Fire print exactly once, regardless of how many times `load` fires.
+  const triggerPrint = () => {
+    if (printed) return;
+    printed = true;
+
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) {
+      removeFrame();
+      return;
+    }
+
+    // Remove the iframe once the print dialog closes. Fall back to a timeout in
+    // case `afterprint` never fires (some browsers, or a dismissed dialog), so
+    // we never leak the iframe.
+    frameWindow.addEventListener('afterprint', removeFrame);
+    removeTimer = window.setTimeout(removeFrame, 60000);
+
+    frameWindow.focus();
+    frameWindow.print();
+  };
+
+  // Print after the iframe's content (and its inline SVGs) has loaded.
+  iframe.addEventListener('load', triggerPrint);
+
+  // srcdoc gives a single, reliable load event once the document is parsed,
+  // and the srcdoc document is same-origin so we can call print() on it.
+  iframe.srcdoc = html;
+  document.body.appendChild(iframe);
+
+  // Small safety net in case the load event doesn't fire; guarded by `printed`
+  // so it can never cause a second print.
+  window.setTimeout(triggerPrint, 1000);
 }
