@@ -104,6 +104,35 @@ const EmptyText = styled.p`
   padding: 16px 0;
 `;
 
+const LoadError = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+`;
+
+const LoadErrorText = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b00020;
+  text-align: center;
+`;
+
+const RetryButton = styled.button`
+  border: 1px solid #2c5e95;
+  border-radius: 6px;
+  background: #2c5e95;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+
+  &:hover {
+    background: #1e3a6e;
+  }
+`;
+
 const VolunteerList = styled.div`
   display: flex;
   flex-direction: column;
@@ -261,14 +290,18 @@ export default function VolunteersPage() {
   const [historyTruncated, setHistoryTruncated] = useState(false);
   const [loadingActive, setLoadingActive] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [activeError, setActiveError] = useState('');
+  const [historyError, setHistoryError] = useState('');
 
   const fetchActive = useCallback(async () => {
     setLoadingActive(true);
+    setActiveError('');
     try {
       const data = await volunteerApi.getActiveVolunteers();
       setActive(data);
     } catch {
       setActive([]);
+      setActiveError("Couldn't load active volunteers. Please try again.");
     } finally {
       setLoadingActive(false);
     }
@@ -276,6 +309,7 @@ export default function VolunteersPage() {
 
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
+    setHistoryError('');
     try {
       const data = await volunteerApi.getVolunteerHistory();
       setHistory(data.history || []);
@@ -283,6 +317,7 @@ export default function VolunteersPage() {
     } catch {
       setHistory([]);
       setHistoryTruncated(false);
+      setHistoryError("Couldn't load volunteer history. Please try again.");
     } finally {
       setLoadingHistory(false);
     }
@@ -330,6 +365,13 @@ export default function VolunteersPage() {
 
           {loadingActive ? (
             <EmptyText>Loading…</EmptyText>
+          ) : activeError ? (
+            <LoadError>
+              <LoadErrorText>{activeError}</LoadErrorText>
+              <RetryButton type='button' onClick={fetchActive}>
+                Try again
+              </RetryButton>
+            </LoadError>
           ) : active.length === 0 ? (
             <EmptyText>No volunteers currently active.</EmptyText>
           ) : (
@@ -375,6 +417,13 @@ export default function VolunteersPage() {
 
           {loadingHistory ? (
             <EmptyText>Loading…</EmptyText>
+          ) : historyError ? (
+            <LoadError>
+              <LoadErrorText>{historyError}</LoadErrorText>
+              <RetryButton type='button' onClick={fetchHistory}>
+                Try again
+              </RetryButton>
+            </LoadError>
           ) : history.length === 0 ? (
             <EmptyText>No volunteer scan-ins for the current code yet.</EmptyText>
           ) : (

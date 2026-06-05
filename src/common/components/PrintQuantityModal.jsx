@@ -78,6 +78,12 @@ const CountInput = styled.input`
   }
 `;
 
+const ErrorText = styled.p`
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #dc2626;
+`;
+
 const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -110,19 +116,27 @@ const Button = styled.button`
 `;
 
 export default function PrintQuantityModal({
-  defaultCopies,
+  defaultCopies = 1,
   onClose,
   onPrint,
 }) {
   const [copies, setCopies] = useState(defaultCopies);
+  const [error, setError] = useState('');
 
   const submit = (event) => {
     event.preventDefault();
-    const normalizedCopies = Math.min(
-      100,
-      Math.max(1, Number.parseInt(copies, 10) || 1)
-    );
-    onPrint(normalizedCopies);
+    const raw = String(copies).trim();
+    if (!/^\d+$/.test(raw)) {
+      setError('Enter a whole number between 1 and 100.');
+      return;
+    }
+    const parsed = Number.parseInt(raw, 10);
+    if (parsed < 1 || parsed > 100) {
+      setError('Enter a whole number between 1 and 100.');
+      return;
+    }
+    setError('');
+    onPrint(parsed);
   };
 
   return (
@@ -146,9 +160,13 @@ export default function PrintQuantityModal({
               max='100'
               value={copies}
               autoFocus
-              onChange={(event) => setCopies(event.target.value)}
+              onChange={(event) => {
+                setCopies(event.target.value);
+                if (error) setError('');
+              }}
             />
           </Field>
+          {error && <ErrorText>{error}</ErrorText>}
           <Actions>
             <Button type='button' onClick={onClose}>
               Cancel
@@ -168,8 +186,4 @@ PrintQuantityModal.propTypes = {
   defaultCopies: PropTypes.number,
   onClose: PropTypes.func.isRequired,
   onPrint: PropTypes.func.isRequired,
-};
-
-PrintQuantityModal.defaultProps = {
-  defaultCopies: 12,
 };

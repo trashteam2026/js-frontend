@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCalendar } from 'react-icons/fi';
 
 import OwnerHeader from '@/common/components/navigation/OwnerHeader';
@@ -30,6 +30,35 @@ const DateRangeRow = styled.div`
   display: flex;
   justify-content: flex-end;
   margin-bottom: 6px;
+`;
+
+const LoadError = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+`;
+
+const LoadErrorText = styled.p`
+  margin: 0;
+  color: #b00020;
+  font-size: 0.95rem;
+  text-align: center;
+`;
+
+const RetryButton = styled.button`
+  border: 1px solid #2c5e95;
+  border-radius: 6px;
+  background: #2c5e95;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+
+  &:hover {
+    background: #1e3a6e;
+  }
 `;
 
 const DateRangeBtn = styled.button`
@@ -481,18 +510,29 @@ export default function ActivityLogPage() {
   const [logs, setLogs] = useState([]);
   const [todayLogs, setTodayLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  useEffect(() => {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
-    activityApi
-      .getLogs({
+    setLoadError('');
+    try {
+      const data = await activityApi.getLogs({
         start: dateRange.start ? toDateString(dateRange.start) : undefined,
         end: dateRange.end ? toDateString(dateRange.end) : undefined,
-      })
-      .then((data) => setLogs(data))
-      .catch((err) => console.error('Failed to load activity logs:', err))
-      .finally(() => setLoading(false));
+      });
+      setLogs(data);
+    } catch (err) {
+      console.error('Failed to load activity logs:', err);
+      setLogs([]);
+      setLoadError("Couldn't load activity. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }, [dateRange]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   // "Today's Traffic" is always anchored to the pantry's current Chicago date,
   // independent of the stats/list date range. Fetch it separately so changing
@@ -586,7 +626,16 @@ export default function ActivityLogPage() {
           </p>
         )}
 
-        {!loading && displayActivity.length === 0 && (
+        {!loading && loadError && (
+          <LoadError>
+            <LoadErrorText>{loadError}</LoadErrorText>
+            <RetryButton type='button' onClick={loadLogs}>
+              Try again
+            </RetryButton>
+          </LoadError>
+        )}
+
+        {!loading && !loadError && displayActivity.length === 0 && (
           <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 40 }}>
             No activity found for the selected date range.
           </p>

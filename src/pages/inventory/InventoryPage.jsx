@@ -76,6 +76,35 @@ const Content = styled.div`
   }
 `;
 
+const LoadError = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+`;
+
+const LoadErrorText = styled.p`
+  margin: 0;
+  color: #b00020;
+  font-size: 0.95rem;
+  text-align: center;
+`;
+
+const RetryButton = styled.button`
+  border: 1px solid #2c5e95;
+  border-radius: 6px;
+  background: #2c5e95;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+
+  &:hover {
+    background: #1e3a6e;
+  }
+`;
+
 // Synthetic id for the fallback group that holds items whose category_id is
 // NULL or points at a category that no longer exists. A string can't collide
 // with the numeric SERIAL ids of real categories.
@@ -87,6 +116,7 @@ export default function InventoryPage() {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [activeTab, setActiveTab] = useState('food');
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -100,6 +130,8 @@ export default function InventoryPage() {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const [cats, its] = await Promise.all([
         categoriesApi.getAll(),
@@ -109,6 +141,9 @@ export default function InventoryPage() {
       setItems(its);
     } catch (err) {
       console.error('Failed to load inventory data:', err);
+      setCategories([]);
+      setItems([]);
+      setLoadError("Couldn't load inventory. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -341,7 +376,14 @@ export default function InventoryPage() {
       />
 
       <Content>
-        {filteredCategories.length === 0 ? (
+        {loadError ? (
+          <LoadError>
+            <LoadErrorText>{loadError}</LoadErrorText>
+            <RetryButton type='button' onClick={loadData}>
+              Try again
+            </RetryButton>
+          </LoadError>
+        ) : filteredCategories.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 40 }}>
             No categories found.
           </p>
