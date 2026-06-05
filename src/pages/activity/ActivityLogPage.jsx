@@ -376,7 +376,7 @@ function TrafficChart({ data }) {
         fontWeight='600'
         fill='#555'
       >
-        Traffic
+        Today&apos;s Traffic
       </text>
     </svg>
   );
@@ -479,6 +479,7 @@ export default function ActivityLogPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [dateRange, setDateRange] = useState(defaultDateRange);
   const [logs, setLogs] = useState([]);
+  const [todayLogs, setTodayLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -493,6 +494,20 @@ export default function ActivityLogPage() {
       .finally(() => setLoading(false));
   }, [dateRange]);
 
+  // "Today's Traffic" is always anchored to the pantry's current Chicago date,
+  // independent of the stats/list date range. Fetch it separately so changing
+  // dateRange never refetches or alters it. Empty deps → runs once on mount:
+  // today's date doesn't depend on the selected range, so there's nothing to
+  // re-run. start = end = today's Chicago calendar date, using the same
+  // chicagoDateString convention as the range fetch (toDateString).
+  useEffect(() => {
+    const today = chicagoDateString(new Date());
+    activityApi
+      .getLogs({ start: today, end: today })
+      .then((data) => setTodayLogs(data))
+      .catch((err) => console.error("Failed to load today's traffic:", err));
+  }, []);
+
   // Debounce the search term so the (memoized) filter below doesn't recompute on
   // every keystroke; the input itself stays fully responsive via searchQuery.
   useEffect(() => {
@@ -506,7 +521,8 @@ export default function ActivityLogPage() {
   // Derived views over the full log set only depend on `logs`; memoize them so a
   // keystroke (which changes the search term, not the logs) doesn't re-run them.
   const stats = useMemo(() => computeStats(logs), [logs]);
-  const trafficData = useMemo(() => computeTrafficData(logs), [logs]);
+  // Traffic is derived from the today-only fetch, NOT the selected-range logs.
+  const trafficData = useMemo(() => computeTrafficData(todayLogs), [todayLogs]);
   const grouped = useMemo(() => groupLogs(logs), [logs]);
 
   const displayActivity = useMemo(() => {
