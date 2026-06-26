@@ -372,10 +372,11 @@ export function openBarcodePrintWindow({
       <head>
         <title>${escapeHtml(itemName)} Barcodes</title>
         <style>
-          /* size: auto -> use whatever label/page size the printer driver has
-             selected (we don't know the user's exact label). margin: 0 removes
-             the wasted Letter margin so the label content can fill the media. */
-          @page { size: auto; margin: 0; }
+          /* Pin the page to the physical media: DYMO LabelWriter 4XL loaded with
+             DYMO Large Multipurpose Labels #30258 (2.125in x 2.75in). Pinning the
+             size stops the layout from defaulting to Letter and overflowing the
+             small label. margin: 0 lets content fill the whole label. */
+          @page { size: 2.125in 2.75in; margin: 0; }
           * { box-sizing: border-box; }
           html, body {
             margin: 0;
@@ -387,10 +388,11 @@ export function openBarcodePrintWindow({
              label per print. */
           .sheet { display: block; }
           .label {
-            /* Fill the full printable page, whatever its size. */
+            /* Fill the full printable page (one label). Small physical padding
+               so we don't waste the tiny 2.125in x 2.75in label area. */
             width: 100%;
             min-height: 100vh;
-            padding: 4%;
+            padding: 0.08in;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -405,11 +407,11 @@ export function openBarcodePrintWindow({
             break-after: page;
             page-break-after: always;
           }
-          /* Text sizes are in vw (relative to page/label width) so they scale
-             proportionally with the label, since we don't know its size. */
+          /* Physical (pt) text sizes, stable for the known 2.125in-wide #30258
+             label. (vw would be ~0.15in tall here — too small to read.) */
           .item-name {
             max-width: 100%;
-            font-size: 7vw;
+            font-size: 10pt;
             font-weight: 700;
             line-height: 1.1;
             overflow-wrap: anywhere;
@@ -417,17 +419,18 @@ export function openBarcodePrintWindow({
           .category-name {
             margin-top: 1.5%;
             max-width: 100%;
-            font-size: 4.5vw;
+            font-size: 8pt;
             color: #4b5563;
             line-height: 1.1;
             overflow-wrap: anywhere;
           }
           .barcode-svg {
-            /* Fill the label width (96% leaves a small quiet zone on each side
-               for reliable scanning). max-height keeps it from overflowing the
-               page on short/wide labels; the viewBox preserves aspect ratio so
-               it letterboxes rather than distorts when height-capped. */
-            width: 96%;
+            /* Fill ~92% of the label width (leaves a small quiet zone on each
+               side for reliable scanning). On the 2.125in x 2.75in #30258 label
+               the barcode is width-constrained, so max-height: 60vh (~1.65in)
+               does not bind; it stays as a safety cap. The viewBox preserves
+               aspect ratio so it letterboxes rather than distorts. */
+            width: 92%;
             max-height: 60vh;
             height: auto;
             margin-top: 4%;
@@ -436,7 +439,7 @@ export function openBarcodePrintWindow({
           .plain-barcode {
             margin-top: 4%;
             font-family: "Courier New", monospace;
-            font-size: 6vw;
+            font-size: 11pt;
             font-weight: 700;
             letter-spacing: 1px;
           }
